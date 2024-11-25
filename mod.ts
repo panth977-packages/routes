@@ -20,6 +20,10 @@
  * - {@link ROUTE.execute}
  * - {@link ROUTE.pathParser}
  * 
+ * # Code Generation
+ * - {@link ROUTES.CodeGen.genJsCode}
+ * - {@link ROUTES.CodeGen.genTsCode}
+ * 
  * @module
  * 
  * @example
