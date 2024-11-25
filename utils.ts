@@ -267,28 +267,23 @@ export type LifeCycle = {
   onExecution?(context: FUNCTIONS.Context, build: Http.Build): void;
   onExecution?(context: FUNCTIONS.Context, build: Sse.Build): void;
 
-  onError?(
-    context: FUNCTIONS.Context,
-    build: Middleware.Build,
-    error: unknown
-  ): void;
-  onError?(context: FUNCTIONS.Context, build: Http.Build, error: unknown): void;
-  onError?(context: FUNCTIONS.Context, build: Sse.Build, error: unknown): void;
-
   onResponse?(
     context: FUNCTIONS.Context,
     build: Middleware.Build,
-    res: z.infer<Middleware.Build["output"]>
+    res: null | z.infer<Middleware.Build["output"]>,
+    err: null | unknown
   ): void;
   onResponse?(
     context: FUNCTIONS.Context,
     build: Http.Build,
-    res: z.infer<Http.Build["output"]>
+    res: null | z.infer<Http.Build["output"]>,
+    err: null | unknown
   ): void;
   onResponse?(
     context: FUNCTIONS.Context,
     build: Sse.Build,
-    res: z.infer<Sse.Build["yield"]>
+    res: null | z.infer<Sse.Build["yield"]>,
+    err: null | unknown
   ): void;
 
   onComplete?(context: FUNCTIONS.Context, build: Middleware.Build): void;
@@ -318,43 +313,46 @@ export async function execute(
   context = FUNCTIONS.DefaultBuildContext(context);
   const options: any[] = [];
   lc.onStatusChange?.("start", context, build);
-  for (const middleware of build.middlewares) {
-    lc.onExecution?.(context, middleware);
-    try {
-      const res = await middleware(context, req);
-      options.push(res.options);
-      lc.onResponse?.(context, middleware, res);
-    } catch (err) {
-      lc.onError?.(context, middleware, err);
-      return;
-    } finally {
-      lc.onComplete?.(context, middleware);
-    }
-  }
-  Object.assign(context, { options: Object.assign({}, ...options) });
-  if (build.endpoint === "http") {
-    lc.onExecution?.(context, build);
-    try {
-      const res = await build(context, req);
-      lc.onResponse?.(context, build, res);
-    } catch (err) {
-      lc.onError?.(context, build, err);
-      return;
-    } finally {
-      lc.onComplete?.(context, build);
-    }
-  } else {
-    lc.onExecution?.(context, build);
-    try {
-      for await (const res of build(context, req)) {
-        lc.onResponse?.(context, build, res);
+  try {
+    for (const middleware of build.middlewares) {
+      lc.onExecution?.(context, middleware);
+      try {
+        const res = await middleware(context, req);
+        options.push(res.options);
+        lc.onResponse?.(context, middleware, res, null);
+      } catch (err) {
+        lc.onResponse?.(context, middleware, null, err);
+        return;
+      } finally {
+        lc.onComplete?.(context, middleware);
       }
-    } catch (err) {
-      lc.onError?.(context, build, err);
-      return;
-    } finally {
-      lc.onComplete?.(context, build);
     }
+    Object.assign(context, { options: Object.assign({}, ...options) });
+    if (build.endpoint === "http") {
+      lc.onExecution?.(context, build);
+      try {
+        const res = await build(context, req);
+        lc.onResponse?.(context, build, res, null);
+      } catch (err) {
+        lc.onResponse?.(context, build, null, err);
+        return;
+      } finally {
+        lc.onComplete?.(context, build);
+      }
+    } else {
+      lc.onExecution?.(context, build);
+      try {
+        for await (const res of build(context, req)) {
+          lc.onResponse?.(context, build, res, null);
+        }
+      } catch (err) {
+        lc.onResponse?.(context, build, null, err);
+        return;
+      } finally {
+        lc.onComplete?.(context, build);
+      }
+    }
+  } finally {
+    lc.onStatusChange?.("complete", context, build);
   }
-  lc.onStatusChange?.("complete", context, build);
 }
