@@ -9,5 +9,5 @@ export * as Sse from "./sse.ts";
 export * from "./utils.ts";
 export * from "./zod-openapi.ts";
 export * from "./endpoint.ts";
-export * from "./schema.ts";
+export * as z from "./schema.ts";
 

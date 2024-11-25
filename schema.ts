@@ -20,27 +20,15 @@ function takeIfDefined<T extends Record<never, z.ZodType | undefined>>(
   return z.object(ret) as never;
 }
 const instance = Symbol();
-export function isMiddlewareInput(
-  schema: z.ZodType
-): schema is z.ZodObject<{ headers?: z.AnyZodObject; query?: z.AnyZodObject }> {
-  return instance in schema ? schema[instance] === zMiddlewareInput : false;
-}
-export function zMiddlewareInput<
-  //
+export function MiddlewareInput<
   H extends undefined | z.AnyZodObject = undefined,
   Q extends undefined | z.AnyZodObject = undefined
 >(shape: { headers?: H; query?: Q }): TakeIfDefined<{ headers: H; query: Q }> {
   const ret = takeIfDefined(shape as { headers: H; query: Q });
-  Object.assign(ret, { [instance]: zMiddlewareInput });
+  Object.assign(ret, { [instance]: MiddlewareInput });
   return ret;
 }
-export function isMiddlewareOutput(
-  schema: z.ZodType
-): schema is z.ZodObject<{ headers?: z.AnyZodObject; options: z.ZodType }> {
-  return instance in schema ? schema[instance] === zMiddlewareOutput : false;
-}
-export function zMiddlewareOutput<
-  //
+export function MiddlewareOutput<
   H extends undefined | z.AnyZodObject,
   O extends z.AnyZodObject
 >(shape: {
@@ -48,19 +36,10 @@ export function zMiddlewareOutput<
   options: O;
 }): TakeIfDefined<{ headers: H; options: O }> {
   const ret = takeIfDefined(shape as { headers: H; options: O });
-  Object.assign(ret, { [instance]: zMiddlewareOutput });
+  Object.assign(ret, { [instance]: MiddlewareOutput });
   return ret;
 }
-export function isHttpInput(schema: z.ZodType): schema is z.ZodObject<{
-  headers?: z.AnyZodObject;
-  path?: z.AnyZodObject;
-  query?: z.AnyZodObject;
-  body?: z.ZodType;
-}> {
-  return instance in schema ? schema[instance] === zHttpInput : false;
-}
-export function zHttpInput<
-  //
+export function HttpInput<
   H extends undefined | z.AnyZodObject = undefined,
   Q extends undefined | z.AnyZodObject = undefined,
   P extends undefined | z.AnyZodObject = undefined,
@@ -74,45 +53,35 @@ export function zHttpInput<
   const ret = takeIfDefined(
     shape as { headers: H; path: P; query: Q; body: B }
   );
-  Object.assign(ret, { [instance]: zHttpInput });
+  Object.assign(ret, { [instance]: HttpInput });
   return ret;
 }
-export function isHttpOutput(
-  schema: z.ZodType
-): schema is z.ZodObject<{ headers?: z.AnyZodObject; body?: z.ZodType }> {
-  return instance in schema ? schema[instance] === zHttpOutput : false;
-}
-export function zHttpOutput<
-  //
+export function HttpOutput<
   H extends undefined | z.AnyZodObject = undefined,
   B extends undefined | z.ZodType = undefined
 >(shape: { headers?: H; body?: B }): TakeIfDefined<{ headers: H; body: B }> {
   const ret = takeIfDefined(shape as { headers: H; body: B });
-  Object.assign(ret, { [instance]: zHttpOutput });
+  Object.assign(ret, { [instance]: HttpOutput });
   return ret;
 }
-export function isSseInput(
-  schema: z.ZodType
-): schema is z.ZodObject<{ path?: z.AnyZodObject; query?: z.AnyZodObject }> {
-  return instance in schema ? schema[instance] === zSseInput : false;
-}
-export function zSseInput<
-  //
+export function SseInput<
   P extends undefined | z.AnyZodObject = undefined,
   Q extends undefined | z.AnyZodObject = undefined
 >(shape: { path?: P; query?: Q }): TakeIfDefined<{ path: P; query: Q }> {
   const ret = takeIfDefined(shape as { path: P; query: Q });
-  Object.assign(ret, { [instance]: zSseInput });
+  Object.assign(ret, { [instance]: SseInput });
   return ret;
 }
-export function isSseYield(schema: z.ZodType): schema is z.ZodString {
-  return instance in schema ? schema[instance] === zSseYield : false;
-}
-export function zSseYield<
-  //
-  Y extends undefined | z.ZodString = undefined
->(_yield?: Y): z.ZodString {
+export function SseYield<Y extends undefined | z.ZodString = undefined>(
+  _yield?: Y
+): z.ZodString {
   const ret = _yield ?? z.string();
-  Object.assign(ret, { [instance]: zSseYield });
+  Object.assign(ret, { [instance]: SseYield });
   return ret;
+}
+export function is<R extends z.ZodType>(
+  schema: z.ZodType,
+  is: (...arg: any) => R
+): schema is R {
+  return instance in schema ? schema[instance] === is : false;
 }

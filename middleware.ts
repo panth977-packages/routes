@@ -77,10 +77,10 @@ export type inferAllOptions<Ms> = Ms extends [
  *       in: "header",
  *     },
  *   },
- *   input: ROUTES.zMiddlewareInput({ // this schema will be used to address route request schema, in documentation
+ *   input: ROUTES.z.MiddlewareInput({ // this schema will be used to address route request schema, in documentation
  *     headers: z.object({ "x-auth-token": z.string() }).passthrough(),
  *   }),
- *   output: ROUTES.zMiddlewareOutput({ // same goes for route response schema
+ *   output: ROUTES.z.MiddlewareOutput({ // same goes for route response schema
  *     options: z.object({
  *       decodedToken: z.object({
  *         userId: z.number(),

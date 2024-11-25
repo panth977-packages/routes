@@ -6,19 +6,19 @@
  * - {@link ROUTES.Sse.build}
  * 
  * # Schemas
- * - {@link ROUTES.zMiddlewareInput}
- * - {@link ROUTES.zMiddlewareOutput}
- * - {@link ROUTES.zHttpInput}
- * - {@link ROUTES.zHttpOutput}
- * - {@link ROUTES.zSseInput}
- * - {@link ROUTES.zSseYield}
- * - {@link ROUTES.WRAPPERS.Debug}
- * - {@link ROUTES.WRAPPERS.MemoData}
- * - {@link ROUTES.WRAPPERS.SafeParse}
+ * - {@link ROUTES.z.MiddlewareInput}
+ * - {@link ROUTES.z.MiddlewareOutput}
+ * - {@link ROUTES.z.HttpInput}
+ * - {@link ROUTES.z.HttpOutput}
+ * - {@link ROUTES.z.SseInput}
+ * - {@link ROUTES.z.SseYield}
+ * - {@link ROUTES.z.is}
  * 
  * # Helper
  * - {@link ROUTES.getRouteDocJson}
  * - {@link ROUTES.getEndpointsFromBundle}
+ * - {@link ROUTE.execute}
+ * - {@link ROUTE.pathParser}
  * 
  * @module
  * 

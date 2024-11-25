@@ -94,12 +94,12 @@ export type Build<
  * @example
  * ```ts
  * export const getLogs = ROUTES.Sse.build([systemAuthorized], "get", "/logs/{requestId}", {
- *   input: ROUTES.zSseInput({
+ *   input: ROUTES.z.SseInput({
  *     path: z.object({
  *       requestId: z.string(),
  *     }),
  *   }),
- *   yield: ROUTES.zSseYield(),
+ *   yield: ROUTES.z.SseYield(),
  *   async *func(context, { path: { requestId } }) {
  *     let logs = [];
  *     let offset = 0;

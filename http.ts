@@ -99,8 +99,8 @@ export type Build<
  * ```ts
  * const getProfile = ROUTES.Http.build([authorize], "get", "/profile", {
  *   description: `Get user profile.`,
- *   input: ROUTES.zHttpInput({}),
- *   output: ROUTES.zHttpOutput({
+ *   input: ROUTES.z.HttpInput({}),
+ *   output: ROUTES.z.HttpOutput({
  *     body: z.object({
  *       id: z.number(),
  *       username: z.string(),
