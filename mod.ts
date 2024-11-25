@@ -17,8 +17,8 @@
  * # Helper
  * - {@link ROUTES.getRouteDocJson}
  * - {@link ROUTES.getEndpointsFromBundle}
- * - {@link ROUTE.execute}
- * - {@link ROUTE.pathParser}
+ * - {@link ROUTES.execute}
+ * - {@link ROUTES.pathParser}
  * 
  * # Code Generation
  * - {@link ROUTES.CodeGen.genJsCode}
