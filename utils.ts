@@ -257,7 +257,11 @@ export function pathParser(path: string): string[] {
 }
 
 export type LifeCycle = {
-  onStatusChange?(status: 'start' | 'complete', context: FUNCTIONS.Context, build: Http.Build | Sse.Build): void;
+  onStatusChange?(
+    status: "start" | "complete",
+    context: FUNCTIONS.Context,
+    build: Http.Build | Sse.Build
+  ): void;
 
   onExecution?(context: FUNCTIONS.Context, build: Middleware.Build): void;
   onExecution?(context: FUNCTIONS.Context, build: Http.Build): void;
@@ -284,8 +288,12 @@ export type LifeCycle = {
   onResponse?(
     context: FUNCTIONS.Context,
     build: Sse.Build,
-    res: null | z.infer<Sse.Build["yield"]>
+    res: z.infer<Sse.Build["yield"]>
   ): void;
+
+  onComplete?(context: FUNCTIONS.Context, build: Middleware.Build): void;
+  onComplete?(context: FUNCTIONS.Context, build: Http.Build): void;
+  onComplete?(context: FUNCTIONS.Context, build: Sse.Build): void;
 };
 
 /**
@@ -308,37 +316,45 @@ export async function execute(
   lc: LifeCycle
 ): Promise<void> {
   context = FUNCTIONS.DefaultBuildContext(context);
-  lc.onStatusChange?.('start', context, build);
+  const options: any[] = [];
+  lc.onStatusChange?.("start", context, build);
   for (const middleware of build.middlewares) {
+    lc.onExecution?.(context, middleware);
     try {
-      lc.onExecution?.(context, middleware);
       const res = await middleware(context, req);
+      options.push(res.options);
       lc.onResponse?.(context, middleware, res);
     } catch (err) {
       lc.onError?.(context, middleware, err);
       return;
+    } finally {
+      lc.onComplete?.(context, middleware);
     }
   }
+  Object.assign(context, { options: Object.assign({}, ...options) });
   if (build.endpoint === "http") {
+    lc.onExecution?.(context, build);
     try {
-      lc.onExecution?.(context, build);
       const res = await build(context, req);
       lc.onResponse?.(context, build, res);
     } catch (err) {
       lc.onError?.(context, build, err);
       return;
+    } finally {
+      lc.onComplete?.(context, build);
     }
   } else {
+    lc.onExecution?.(context, build);
     try {
-      lc.onExecution?.(context, build);
       for await (const res of build(context, req)) {
         lc.onResponse?.(context, build, res);
       }
-      lc.onResponse?.(context, build, null);
     } catch (err) {
       lc.onError?.(context, build, err);
       return;
+    } finally {
+      lc.onComplete?.(context, build);
     }
   }
-  lc.onStatusChange?.('complete', context, build);
+  lc.onStatusChange?.("complete", context, build);
 }
