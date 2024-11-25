@@ -26,7 +26,7 @@ import type { FUNCTIONS } from "@panth977/functions";
 export class Endpoint<Ms extends [] | [any, ...any[]]> {
   middlewares: Ms;
   tags: string[];
-  static build() {
+  static build(): Endpoint<[]> {
     return new Endpoint([], []);
   }
   private constructor(middlewares: Ms, tags: string[]) {
