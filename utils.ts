@@ -34,14 +34,19 @@ import type { Sse, Http, Middleware } from "./endpoint/index.ts";
  * export * from './b.ts';
  * // --- server.ts ---
  * import * as routes_ from './routes/index.ts';
- * const routes = ROUTES.getEndpointsFromBundle(routes_); // strong type will be lost
+ * const routes = ROUTES.getEndpointsFromBundle({bundle: routes_}); // strong type will be lost
  * console.log(routes) // {route1: ..., route2: ..., route3: ..., route4: ...}
  * ```
  */
-export function getEndpointsFromBundle<B extends Record<never, never>>(
-  bundle: B,
-  options?: { includeTags?: string[]; excludeTags?: string[] }
-): Record<string, Http.Build | Sse.Build> {
+export function getEndpointsFromBundle<B extends Record<never, never>>({
+  bundle,
+  excludeTags,
+  includeTags,
+}: {
+  bundle: B;
+  includeTags?: string[];
+  excludeTags?: string[];
+}): Record<string, Http.Build | Sse.Build> {
   const allReady: Record<string, Http.Build | Sse.Build> = {};
   for (const loc in bundle) {
     const build = bundle[loc];
@@ -60,8 +65,8 @@ export function getEndpointsFromBundle<B extends Record<never, never>>(
       allReady[loc] = build as unknown as Sse.Build;
     }
   }
-  if (options?.includeTags) {
-    const tags = new Set(options.includeTags);
+  if (includeTags) {
+    const tags = new Set(includeTags);
     loop: for (const loc in allReady) {
       const docTags = allReady[loc].middlewares.reduce(
         (tags, m) => [...tags, ...(m.tags ?? [])],
@@ -75,8 +80,8 @@ export function getEndpointsFromBundle<B extends Record<never, never>>(
       delete allReady[loc];
     }
   }
-  if (options?.excludeTags) {
-    const tags = new Set(options.excludeTags);
+  if (excludeTags) {
+    const tags = new Set(excludeTags);
     loop: for (const loc in allReady) {
       const docTags = allReady[loc].middlewares.reduce(
         (tags, m) => [...tags, ...(m.tags ?? [])],
@@ -322,7 +327,7 @@ export async function execute({
   path,
   query,
 }: {
-  context: FUNCTIONS.Context | string | null;
+  context: FUNCTIONS.Context;
   build: Http.Build | Sse.Build;
   headers?: Record<string, string | string[]>;
   path?: Record<string, string>;
