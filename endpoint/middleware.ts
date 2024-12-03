@@ -57,11 +57,11 @@ export type Build<
 ) => Promise<O["_output"]>) &
   _Params &
   Pick<
-    FUNCTIONS.AsyncFunction.Build<I, O, S, C, W> & {
-      endpoint: "middleware";
-    },
+    FUNCTIONS.AsyncFunction.Build<I, O, S, C, W>,
     keyof FUNCTIONS.AsyncFunction.Build
-  >;
+  > & {
+    endpoint: "middleware";
+  };
 export type inferAllOptions<Ms> = Ms extends [
   Build<
     any,
