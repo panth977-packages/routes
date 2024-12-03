@@ -1,6 +1,4 @@
-import type * as Middleware from "./middleware.ts";
-import * as Sse from "./sse.ts";
-import * as Http from "./http.ts";
+import { Sse, Http, type Middleware } from "./endpoint/index.ts";
 import type { FUNCTIONS } from "@panth977/functions";
 
 /**

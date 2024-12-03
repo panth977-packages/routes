@@ -1,7 +1,7 @@
 import type * as Middleware from "./middleware.ts";
 import { z } from "zod";
 import type { ZodOpenApiOperationObject } from "zod-openapi";
-import type { SecuritySchemeObject } from "./zod-openapi.ts";
+import type { SecuritySchemeObject } from "../zod-openapi.ts";
 import { FUNCTIONS } from "@panth977/functions";
 
 export type Method = "get";
@@ -50,8 +50,12 @@ export type Params<
       C & { options: Middleware.inferAllOptions<Ms> },
       W
     >,
-    "output" | "next"
-  >;
+    "output" | "next" | "func"
+  > & {
+    func: (
+      arg: { context: C; build: Build<Ms, I, Y, S, C, W> } & I["_output"]
+    ) => AsyncGenerator<Y["_input"], void, void>;
+  };
 
 type _Params = {
   tags?: ZodOpenApiOperationObject["tags"];
@@ -67,18 +71,26 @@ export type Build<
   S = unknown,
   C extends FUNCTIONS.Context = FUNCTIONS.Context,
   W extends Wrappers<Ms, I, Y, S, C> = []
-> = _Params &
-  FUNCTIONS.AsyncGenerator.Build<
-    I,
-    Y,
-    z.ZodVoid,
-    z.ZodVoid,
-    S,
-    C & { options: Middleware.inferAllOptions<Ms> },
-    W
+> = ((
+  arg: {
+    context?: FUNCTIONS.Context | string | null;
+  } & I["_input"]
+) => AsyncGenerator<Y["_output"], void, void>) &
+  _Params &
+  Pick<
+    FUNCTIONS.AsyncGenerator.Build<
+      I,
+      Y,
+      z.ZodVoid,
+      z.ZodVoid,
+      S,
+      C & { options: Middleware.inferAllOptions<Ms> },
+      W
+    >,
+    keyof FUNCTIONS.AsyncGenerator.Build
   > & {
-    path: string;
-    method: Method;
+    path: string[];
+    method: Method[];
     endpoint: "sse";
     middlewares: Middleware.Build[];
   };
@@ -100,7 +112,7 @@ export type Build<
  *     }),
  *   }),
  *   yield: ROUTES.z.SseYield(),
- *   async *func(context, { path: { requestId } }) {
+ *   async *func({context, path: { requestId }}) {
  *     let logs = [];
  *     let offset = 0;
  *     do {
@@ -123,8 +135,8 @@ export function build<
   W extends Wrappers<Ms, I, Y, S, C>
 >(
   middlewares: Middleware.Build[],
-  method: Method,
-  path: string,
+  method: Method | Method[],
+  path: string | string[],
   _params: Params<Ms, I, Y, S, C, W>
 ): Build<Ms, I, Y, S, C, W> {
   const params: _Params = {
@@ -133,11 +145,26 @@ export function build<
     summary: _params.summary,
     tags: _params.tags,
   };
-  const __params = Object.assign(_params, { output: z.void(), next: z.void() });
-  return Object.assign(FUNCTIONS.AsyncGenerator.build(__params), params, {
-    endpoint: "sse",
-    path: path,
-    method: method,
-    middlewares,
-  } as const);
+  const _build = FUNCTIONS.AsyncGenerator.build({
+    ..._params,
+    output: z.void(),
+    next: z.void(),
+    func: ({ input, context }) => _params.func({ context, build, ...input }),
+  });
+  const build: Build<Ms, I, Y, S, C, W> = Object.assign(
+    ({
+      context,
+      ...input
+    }: { context?: FUNCTIONS.Context | string | null } & I["_input"]) =>
+      _build({ context, input }),
+    _build,
+    params,
+    {
+      endpoint: "sse",
+      middlewares,
+      method: Array.isArray(method) ? method : [method],
+      path: Array.isArray(path) ? path : [path],
+    } as const
+  );
+  return build;
 }

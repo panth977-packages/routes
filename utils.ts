@@ -1,15 +1,14 @@
-import type * as Sse from "./sse.ts";
-import type * as Http from "./http.ts";
-import type * as Middleware from "./middleware.ts";
 import {
   createDocument,
   type ZodOpenApiObject,
+  type ZodOpenApiOperationObject,
   type ZodOpenApiPathsObject,
-  type ZodOpenApiResponsesObject,
+  type ZodOpenApiResponseObject,
 } from "zod-openapi";
 import type { OpenAPIObject } from "./zod-openapi.ts";
 import { z } from "zod";
 import { FUNCTIONS } from "@panth977/functions";
+import type { Sse, Http, Middleware } from "./endpoint/index.ts";
 
 /**
  * use this bundler to convert strongly typed Record<key, endpoint> to loosely.
@@ -113,15 +112,15 @@ export function getRouteDocJson(
     params.components?.securitySchemes ?? {}
   );
   for (const build of Object.values(docEndpoints)) {
-    const { method, path } = build;
     const middlewares = build.middlewares;
     const security = [
       ...middlewares.map((m) => m.security ?? {}),
       build.security ?? {},
     ];
     Object.assign(securityData, ...security);
+    let obj: ZodOpenApiOperationObject;
     if (build.endpoint === "http") {
-      (paths[path] ??= {})[method] = {
+      obj = {
         operationId: build.getName(),
         tags: middlewares.reduce(
           (tags, m) => [...tags, ...(m.tags ?? [])],
@@ -182,12 +181,11 @@ export function getRouteDocJson(
                 }
               )
             ),
-          },
-        } as ZodOpenApiResponsesObject,
+          } as ZodOpenApiResponseObject,
+        },
       };
-    }
-    if (build.endpoint === "sse") {
-      (paths[path] ??= {})[method] = {
+    } else if (build.endpoint === "sse") {
+      obj = {
         operationId: build.getName(),
         tags: middlewares.reduce(
           (tags, m) => tags.concat(m.tags ?? []),
@@ -234,6 +232,16 @@ export function getRouteDocJson(
           },
         },
       };
+    } else {
+      throw new Error("Unimplemented");
+    }
+    for (const path of build.path) {
+      paths[path] ??= {};
+      for (const method of build.method) {
+        if (paths[path][method])
+          throw new Error(`[${[path, method]}] Found duplicate.`);
+        paths[path][method] = obj;
+      }
     }
   }
   (params.components ??= {}).securitySchemes = securityData;
@@ -257,38 +265,44 @@ export function pathParser(path: string): string[] {
 }
 
 export type LifeCycle = {
-  onStatusChange?(
-    status: "start" | "complete",
-    context: FUNCTIONS.Context,
-    build: Http.Build | Sse.Build
-  ): void;
+  onStatusChange?(arg: {
+    status: "start" | "complete";
+    context: FUNCTIONS.Context;
+    build: Http.Build | Sse.Build;
+  }): void;
 
-  onExecution?(context: FUNCTIONS.Context, build: Middleware.Build): void;
-  onExecution?(context: FUNCTIONS.Context, build: Http.Build): void;
-  onExecution?(context: FUNCTIONS.Context, build: Sse.Build): void;
+  onExecution?(arg: {
+    context: FUNCTIONS.Context;
+    build: Middleware.Build;
+  }): void;
+  onExecution?(arg: { context: FUNCTIONS.Context; build: Http.Build }): void;
+  onExecution?(arg: { context: FUNCTIONS.Context; build: Sse.Build }): void;
 
-  onResponse?(
-    context: FUNCTIONS.Context,
-    build: Middleware.Build,
-    res: null | z.infer<Middleware.Build["output"]>,
-    err: null | unknown
-  ): void;
-  onResponse?(
-    context: FUNCTIONS.Context,
-    build: Http.Build,
-    res: null | z.infer<Http.Build["output"]>,
-    err: null | unknown
-  ): void;
-  onResponse?(
-    context: FUNCTIONS.Context,
-    build: Sse.Build,
-    res: null | z.infer<Sse.Build["yield"]>,
-    err: null | unknown
-  ): void;
+  onResponse?(arg: {
+    context: FUNCTIONS.Context;
+    build: Middleware.Build;
+    res: null | z.infer<Middleware.Build["output"]>;
+    err: null | unknown;
+  }): void;
+  onResponse?(arg: {
+    context: FUNCTIONS.Context;
+    build: Http.Build;
+    res: null | z.infer<Http.Build["output"]>;
+    err: null | unknown;
+  }): void;
+  onResponse?(arg: {
+    context: FUNCTIONS.Context;
+    build: Sse.Build;
+    res: null | z.infer<Sse.Build["yield"]>;
+    err: null | unknown;
+  }): void;
 
-  onComplete?(context: FUNCTIONS.Context, build: Middleware.Build): void;
-  onComplete?(context: FUNCTIONS.Context, build: Http.Build): void;
-  onComplete?(context: FUNCTIONS.Context, build: Sse.Build): void;
+  onComplete?(arg: {
+    context: FUNCTIONS.Context;
+    build: Middleware.Build;
+  }): void;
+  onComplete?(arg: { context: FUNCTIONS.Context; build: Http.Build }): void;
+  onComplete?(arg: { context: FUNCTIONS.Context; build: Sse.Build }): void;
 };
 
 /**
@@ -299,60 +313,66 @@ export type LifeCycle = {
  * @param cbs
  * @returns
  */
-export async function execute(
-  context: FUNCTIONS.Context | string | null,
-  build: Http.Build | Sse.Build,
-  req: {
-    headers?: Record<string, string | string[]>;
-    path?: Record<string, string>;
-    query?: Record<string, string | string[]>;
-    body?: any;
-  },
-  lc: LifeCycle
-): Promise<void> {
+export async function execute({
+  build,
+  lc,
+  context,
+  body,
+  headers,
+  path,
+  query,
+}: {
+  context: FUNCTIONS.Context | string | null;
+  build: Http.Build | Sse.Build;
+  headers?: Record<string, string | string[]>;
+  path?: Record<string, string>;
+  query?: Record<string, string | string[]>;
+  body?: any;
+  lc: LifeCycle;
+}): Promise<void> {
   context = FUNCTIONS.DefaultBuildContext(context);
   const options: any[] = [];
-  lc.onStatusChange?.("start", context, build);
+  lc.onStatusChange?.({ status: "start", context, build });
   try {
     for (const middleware of build.middlewares) {
-      lc.onExecution?.(context, middleware);
+      lc.onExecution?.({ context, build: middleware });
       try {
-        const res = await middleware(context, req);
+        const res = await middleware({ context, headers, query });
         options.push(res.options);
-        lc.onResponse?.(context, middleware, res, null);
+        lc.onResponse?.({ context, build: middleware, res: res, err: null });
       } catch (err) {
-        lc.onResponse?.(context, middleware, null, err);
+        lc.onResponse?.({ context, build: middleware, res: null, err: err });
         return;
       } finally {
-        lc.onComplete?.(context, middleware);
+        lc.onComplete?.({ context, build: middleware });
       }
     }
     Object.assign(context, { options: Object.assign({}, ...options) });
     if (build.endpoint === "http") {
-      lc.onExecution?.(context, build);
+      lc.onExecution?.({ context, build });
       try {
-        const res = await build(context, req);
-        lc.onResponse?.(context, build, res, null);
+        const res = await build({ body, context, headers, path, query });
+        lc.onResponse?.({ context, build: build, res: res, err: null });
       } catch (err) {
-        lc.onResponse?.(context, build, null, err);
+        lc.onResponse?.({ context, build: build, res: null, err: err });
         return;
       } finally {
-        lc.onComplete?.(context, build);
+        lc.onComplete?.({ context, build: build });
       }
     } else {
-      lc.onExecution?.(context, build);
+      lc.onExecution?.({ context, build });
       try {
-        for await (const res of build(context, req)) {
-          lc.onResponse?.(context, build, res, null);
+        for await (const res of build({ context, path, query })) {
+          lc.onResponse?.({ context, build: build, res: res, err: null });
         }
       } catch (err) {
-        lc.onResponse?.(context, build, null, err);
+        lc.onResponse?.({ context, build: build, res: null, err: err });
         return;
       } finally {
-        lc.onComplete?.(context, build);
+        lc.onComplete?.({ context, build: build });
       }
     }
   } finally {
-    lc.onStatusChange?.("complete", context, build);
+    lc.onStatusChange?.({ status: "complete", context, build });
   }
 }

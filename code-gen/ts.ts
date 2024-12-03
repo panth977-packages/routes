@@ -401,10 +401,10 @@ const exe = FUNCTIONS.SyncFunction.build({
     createSchemaFor: true,
   }),
   wrappers: (_) => [
-    function (context, input, func) {
+    function ({ context, input, func, build }) {
       json = input.json;
       options = input.options;
-      return func(context, input);
+      return func({ context, input, build });
     },
   ],
   func() {

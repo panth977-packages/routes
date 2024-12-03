@@ -129,5 +129,8 @@ export function getAllRoutes(json: OpenAPIObject, options: Options) {
 
 export type GenCodeFn<O extends z.AnyZodObject> = FUNCTIONS.SyncFunction.Build<
   z.ZodObject<{ json: z.ZodType<OpenAPIObject>; options: O }>,
-  z.ZodObject<Omit<O["shape"], "createRoutesFor" | "createSchemaFor">>
+  z.ZodObject<Omit<O["shape"], "createRoutesFor" | "createSchemaFor">>,
+  any,
+  any,
+  any
 >;

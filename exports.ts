@@ -3,9 +3,7 @@
  * @module
  */
 
-export * as Middleware from "./middleware.ts";
-export * as Http from "./http.ts";
-export * as Sse from "./sse.ts";
+export * from "./endpoint/index.ts";
 export * from "./utils.ts";
 export * from "./zod-openapi.ts";
 export * from "./endpoint.ts";

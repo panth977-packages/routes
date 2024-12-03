@@ -18,8 +18,8 @@ import { FUNCTIONS } from "@panth977/functions";
 const optionsSchema: z.ZodObject<
   (typeof defaultOptionsSchema)["shape"] & {
     lang: z.ZodEnum<["ts", "js"]>;
-    EndpointClassName: z.ZodDefault<z.ZodOptional<z.ZodString>>
-    EndpointClassCode: z.ZodBoolean
+    EndpointClassName: z.ZodDefault<z.ZodOptional<z.ZodString>>;
+    EndpointClassCode: z.ZodBoolean;
   }
 > = defaultOptionsSchema.extend({
   lang: z.enum(["ts", "js"]),
@@ -434,10 +434,10 @@ const exe = FUNCTIONS.SyncFunction.build({
     createSchemaFor: true,
   }),
   wrappers: (_) => [
-    function (context, input, func) {
+    function ({ context, input, func, build }) {
       json = input.json;
       options = input.options;
-      return func(context, input);
+      return func({ context, input, build });
     },
   ],
   func() {

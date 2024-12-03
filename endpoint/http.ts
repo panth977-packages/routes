@@ -1,6 +1,6 @@
 import type * as Middleware from "./middleware.ts";
 import type { ZodOpenApiOperationObject } from "zod-openapi";
-import type { SecuritySchemeObject } from "./zod-openapi.ts";
+import type { SecuritySchemeObject } from "../zod-openapi.ts";
 import type { z } from "zod";
 import { FUNCTIONS } from "@panth977/functions";
 
@@ -51,13 +51,20 @@ export type Params<
   C extends FUNCTIONS.Context,
   W extends Wrappers<Ms, I, O, S, C>
 > = _Params &
-  FUNCTIONS.AsyncFunction.Params<
-    I,
-    O,
-    S,
-    C & { options: Middleware.inferAllOptions<Ms> },
-    W
-  >;
+  Omit<
+    FUNCTIONS.AsyncFunction.Params<
+      I,
+      O,
+      S,
+      C & { options: Middleware.inferAllOptions<Ms> },
+      W
+    >,
+    "func"
+  > & {
+    func: (
+      arg: { context: C; build: Build<Ms, I, O, S, C, W> } & I["_output"]
+    ) => Promise<O["_input"]>;
+  };
 
 export type _Params = {
   tags?: ZodOpenApiOperationObject["tags"];
@@ -74,16 +81,24 @@ export type Build<
   S = unknown,
   C extends FUNCTIONS.Context = FUNCTIONS.Context,
   W extends Wrappers<Ms, I, O, S, C> = Wrappers<Ms, I, O, S, C>
-> = _Params &
-  FUNCTIONS.AsyncFunction.Build<
-    I,
-    O,
-    S,
-    C & { options: Middleware.inferAllOptions<Ms> },
-    W
+> = ((
+  arg: {
+    context?: FUNCTIONS.Context | string | null;
+  } & I["_input"]
+) => Promise<O["_output"]>) &
+  _Params &
+  Pick<
+    FUNCTIONS.AsyncFunction.Build<
+      I,
+      O,
+      S,
+      C & { options: Middleware.inferAllOptions<Ms> },
+      W
+    >,
+    keyof FUNCTIONS.AsyncFunction.Build
   > & {
-    method: Method;
-    path: string;
+    method: Method[];
+    path: string[];
     endpoint: "http";
     middlewares: Ms;
   };
@@ -111,7 +126,7 @@ export type Build<
  *   static: {
  *     query: `Select * from users where id = ? LIMIT 1`,
  *   },
- *   async func(context, input, build) {
+ *   async func({context, build}) {
  *     const { userId } = context.options.decodedToken;
  *     const result = await pg.query(build.static.query, [userId]);
  *     if (!result.rows.length) throw createHttpError.NotFound("Given user was not found in db, could be because someone has deleted the user.");
@@ -129,8 +144,8 @@ export function build<
   W extends Wrappers<Ms, I, O, S, C>
 >(
   middlewares: Ms,
-  method: Method,
-  path: string,
+  method: Method | Method[],
+  path: string | string[],
   _params: Params<Ms, I, O, S, C, W>
 ): Build<Ms, I, O, S, C, W> {
   const params: _Params = {
@@ -141,10 +156,24 @@ export function build<
     summary: _params.summary,
     tags: _params.tags,
   };
-  return Object.assign(FUNCTIONS.AsyncFunction.build(_params), params, {
-    middlewares,
-    endpoint: "http",
-    method: method,
-    path: path,
-  } as const);
+  const _build = FUNCTIONS.AsyncFunction.build({
+    ..._params,
+    func: ({ input, context }) => _params.func({ context, build, ...input }),
+  });
+  const build: Build<Ms, I, O, S, C, W> = Object.assign(
+    ({
+      context,
+      ...input
+    }: { context?: FUNCTIONS.Context | string | null } & I["_input"]) =>
+      _build({ context, input }),
+    _build,
+    params,
+    {
+      middlewares,
+      endpoint: "http",
+      method: Array.isArray(method) ? method : [method],
+      path: Array.isArray(path) ? path : [path],
+    } as const
+  );
+  return build;
 }

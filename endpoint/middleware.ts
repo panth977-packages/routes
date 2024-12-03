@@ -1,7 +1,7 @@
 import type { z } from "zod";
 import { FUNCTIONS } from "@panth977/functions";
 import type { ZodOpenApiOperationObject } from "zod-openapi";
-import type { SecuritySchemeObject } from "./zod-openapi.ts";
+import type { SecuritySchemeObject } from "../zod-openapi.ts";
 
 export type zInput = z.ZodObject<{
   headers?: z.AnyZodObject;
@@ -30,7 +30,12 @@ export type Params<
   S,
   C extends FUNCTIONS.Context,
   W extends Wrappers<I, O, S, C>
-> = _Params & FUNCTIONS.AsyncFunction.Params<I, O, S, C, W>;
+> = _Params &
+  Omit<FUNCTIONS.AsyncFunction.Params<I, O, S, C, W>, "func"> & {
+    func: (
+      arg: { context: C; build: Build<I, O, S, C, W> } & I["_output"]
+    ) => Promise<O["_input"]>;
+  };
 
 type _Params = {
   tags?: ZodOpenApiOperationObject["tags"];
@@ -45,10 +50,18 @@ export type Build<
   S = unknown,
   C extends FUNCTIONS.Context = FUNCTIONS.Context,
   W extends Wrappers<I, O, S, C> = Wrappers<I, O, S, C>
-> = _Params &
-  FUNCTIONS.AsyncFunction.Build<I, O, S, C, W> & {
-    endpoint: "middleware";
-  };
+> = ((
+  arg: {
+    context?: FUNCTIONS.Context | string | null;
+  } & I["_input"]
+) => Promise<O["_output"]>) &
+  _Params &
+  Pick<
+    FUNCTIONS.AsyncFunction.Build<I, O, S, C, W> & {
+      endpoint: "middleware";
+    },
+    keyof FUNCTIONS.AsyncFunction.Build
+  >;
 export type inferAllOptions<Ms> = Ms extends [
   Build<
     any,
@@ -87,11 +100,11 @@ export type inferAllOptions<Ms> = Ms extends [
  *       }),
  *     }),
  *   }),
- *   async func(context, input) {
+ *   async func({context, headers}) {
  *     const token =
- *       input.headers["x-auth-token"] ??
- *       input.headers["authorized"] ??
- *       input.headers["x-token"];
+ *       headers["x-auth-token"] ??
+ *       headers["authorized"] ??
+ *       headers["x-token"];
  *     const decoded = await decodeToken(token);
  *     if (!decoded) throw createHttpError.Unauthorized("Token not found / Token got Expired / Invalid Token!");
  *     return { options: { decodedToken: decoded } };
@@ -112,7 +125,19 @@ export function build<
     description: _params.description,
     summary: _params.summary,
   };
-  return Object.assign(FUNCTIONS.AsyncFunction.build(_params), params, {
-    endpoint: "middleware",
-  } as const);
+  const _build = FUNCTIONS.AsyncFunction.build({
+    ..._params,
+    func: ({ input, context }) => _params.func({ context, build, ...input }),
+  });
+  const build: Build<I, O, S, C, W> = Object.assign(
+    ({
+      context,
+      ...input
+    }: { context?: FUNCTIONS.Context | string | null } & I["_input"]) =>
+      _build({ context, input }),
+    _build,
+    params,
+    { endpoint: "middleware" } as const
+  );
+  return build;
 }
