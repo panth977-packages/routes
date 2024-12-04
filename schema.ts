@@ -29,13 +29,11 @@ export function MiddlewareInput<
   return ret;
 }
 export function MiddlewareOutput<
-  H extends undefined | z.AnyZodObject,
-  O extends z.AnyZodObject
+  H extends undefined | z.AnyZodObject
 >(shape: {
   headers?: H;
-  options: O;
-}): TakeIfDefined<{ headers: H; options: O }> {
-  const ret = takeIfDefined(shape as { headers: H; options: O });
+}): TakeIfDefined<{ headers: H }> {
+  const ret = takeIfDefined(shape as { headers: H });
   Object.assign(ret, { [instance]: MiddlewareOutput });
   return ret;
 }

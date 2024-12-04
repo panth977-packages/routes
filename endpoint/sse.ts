@@ -17,14 +17,7 @@ export type WrapperBuild<
   Y extends zYield = zYield,
   S = unknown,
   C extends FUNCTIONS.Context = FUNCTIONS.Context
-> = FUNCTIONS.AsyncGenerator.WrapperBuild<
-  I,
-  Y,
-  z.ZodVoid,
-  z.ZodVoid,
-  S,
-  C & { options: Middleware.inferAllOptions<Ms> }
->;
+> = FUNCTIONS.AsyncGenerator.WrapperBuild<I, Y, z.ZodVoid, z.ZodVoid, S, C>;
 export type Wrappers<
   Ms,
   I extends zInput = zInput,
@@ -41,15 +34,7 @@ export type Params<
   W extends Wrappers<Ms, I, Y, S, C>
 > = _Params &
   Omit<
-    FUNCTIONS.AsyncGenerator.Params<
-      I,
-      Y,
-      z.ZodVoid,
-      z.ZodVoid,
-      S,
-      C & { options: Middleware.inferAllOptions<Ms> },
-      W
-    >,
+    FUNCTIONS.AsyncGenerator.Params<I, Y, z.ZodVoid, z.ZodVoid, S, C, W>,
     "output" | "next" | "func"
   > & {
     func: (
@@ -78,15 +63,7 @@ export type Build<
 ) => AsyncGenerator<Y["_output"], void, void>) &
   _Params &
   Pick<
-    FUNCTIONS.AsyncGenerator.Build<
-      I,
-      Y,
-      z.ZodVoid,
-      z.ZodVoid,
-      S,
-      C & { options: Middleware.inferAllOptions<Ms> },
-      W
-    >,
+    FUNCTIONS.AsyncGenerator.Build<I, Y, z.ZodVoid, z.ZodVoid, S, C, W>,
     keyof FUNCTIONS.AsyncGenerator.Build
   > & {
     path: string[];

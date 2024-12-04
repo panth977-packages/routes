@@ -336,14 +336,12 @@ export async function execute({
   lc: LifeCycle;
 }): Promise<void> {
   context = FUNCTIONS.DefaultBuildContext(context);
-  const options: any[] = [];
   lc.onStatusChange?.({ status: "start", context, build });
   try {
     for (const middleware of build.middlewares) {
       lc.onExecution?.({ context, build: middleware });
       try {
         const res = await middleware({ context, headers, query });
-        options.push(res.options);
         lc.onResponse?.({ context, build: middleware, res: res, err: null });
       } catch (err) {
         lc.onResponse?.({ context, build: middleware, res: null, err: err });
@@ -352,7 +350,6 @@ export async function execute({
         lc.onComplete?.({ context, build: middleware });
       }
     }
-    Object.assign(context, { options: Object.assign({}, ...options) });
     if (build.endpoint === "http") {
       lc.onExecution?.({ context, build });
       try {

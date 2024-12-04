@@ -7,10 +7,7 @@ export type zInput = z.ZodObject<{
   headers?: z.AnyZodObject;
   query?: z.AnyZodObject;
 }>;
-export type zOutput = z.ZodObject<{
-  headers?: z.AnyZodObject;
-  options: z.ZodType;
-}>;
+export type zOutput = z.ZodObject<{ headers?: z.AnyZodObject }>;
 
 export type WrapperBuild<
   I extends zInput = zInput,
@@ -62,18 +59,7 @@ export type Build<
   > & {
     endpoint: "middleware";
   };
-export type inferAllOptions<Ms> = Ms extends [
-  Build<
-    any,
-    z.ZodObject<{ options: infer O extends z.ZodType }>,
-    any,
-    any,
-    any
-  >,
-  ...infer Bs
-]
-  ? z.infer<O> & inferAllOptions<Bs>
-  : unknown;
+
 /**
  * A complete builder with localized information for documenting middleware & building implementation with strict input/output schema
  * @param _params

@@ -29,12 +29,7 @@ export type WrapperBuild<
   O extends zOutput = zOutput,
   S = any,
   C extends FUNCTIONS.Context = FUNCTIONS.Context
-> = FUNCTIONS.AsyncFunction.WrapperBuild<
-  I,
-  O,
-  S,
-  C & { options: Middleware.inferAllOptions<Ms> }
->;
+> = FUNCTIONS.AsyncFunction.WrapperBuild<I, O, S, C>;
 export type Wrappers<
   Ms,
   I extends zInput = zInput,
@@ -51,18 +46,12 @@ export type Params<
   C extends FUNCTIONS.Context,
   W extends Wrappers<Ms, I, O, S, C>
 > = _Params &
-  Omit<
-    FUNCTIONS.AsyncFunction.Params<
-      I,
-      O,
-      S,
-      C & { options: Middleware.inferAllOptions<Ms> },
-      W
-    >,
-    "func"
-  > & {
+  Omit<FUNCTIONS.AsyncFunction.Params<I, O, S, C, W>, "func"> & {
     func: (
-      arg: { context: C; build: Build<Ms, I, O, S, C, W> } & I["_output"]
+      arg: {
+        context: C;
+        build: Build<Ms, I, O, S, C, W>;
+      } & I["_output"]
     ) => Promise<O["_input"]>;
   };
 
@@ -88,13 +77,7 @@ export type Build<
 ) => Promise<O["_output"]>) &
   _Params &
   Pick<
-    FUNCTIONS.AsyncFunction.Build<
-      I,
-      O,
-      S,
-      C & { options: Middleware.inferAllOptions<Ms> },
-      W
-    >,
+    FUNCTIONS.AsyncFunction.Build<I, O, S, C, W>,
     keyof FUNCTIONS.AsyncFunction.Build
   > & {
     method: Method[];
