@@ -51,7 +51,7 @@ export type Build<
 ) => Promise<O["_output"]>) &
   Pick<
     FUNCTIONS.AsyncFunction.Build<I, O, S, C, W>,
-    keyof FUNCTIONS.AsyncFunction.Build
+    keyof FUNCTIONS.AsyncFunction.Build<I, O, S, C, W>
   > & {
     endpoint: "middleware";
   } & ExtraParams;

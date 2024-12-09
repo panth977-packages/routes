@@ -57,7 +57,7 @@ export type Build<
 ) => AsyncGenerator<Y["_output"], void, void>) &
   Pick<
     FUNCTIONS.AsyncGenerator.Build<I, Y, z.ZodVoid, z.ZodVoid, S, C, W>,
-    keyof FUNCTIONS.AsyncGenerator.Build
+    keyof FUNCTIONS.AsyncGenerator.Build<I, Y, z.ZodVoid, z.ZodVoid, S, C, W>
   > & {
     path: string[];
     method: Method[];
