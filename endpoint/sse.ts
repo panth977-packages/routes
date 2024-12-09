@@ -1,5 +1,5 @@
 import type * as Middleware from "./middleware.ts";
-import type { z } from "zod";
+import { z } from "zod";
 import type { ZodOpenApiOperationObject } from "zod-openapi";
 import type { SecuritySchemeObject } from "../zod-openapi.ts";
 import { FUNCTIONS } from "@panth977/functions";
@@ -53,9 +53,7 @@ export type Build<
   C extends FUNCTIONS.Context = FUNCTIONS.Context,
   W extends Wrappers<I, Y, S, C> = []
 > = ((
-  arg: {
-    context: FUNCTIONS.Context;
-  } & I["_input"]
+  arg: { context: FUNCTIONS.Context } & I["_input"]
 ) => AsyncGenerator<Y["_output"], void, void>) &
   Pick<
     FUNCTIONS.AsyncGenerator.Build<I, Y, z.ZodVoid, z.ZodVoid, S, C, W>,
@@ -72,7 +70,7 @@ export type Build<
  * @param middlewares
  * @param method
  * @param path
- * @param _params
+ * @param params
  * @returns
  *
  * @example
@@ -106,35 +104,36 @@ export function build<
   C extends FUNCTIONS.Context,
   W extends Wrappers<I, Y, S, C>
 >(
-  middlewares: Middleware.Build[],
+  middlewares: Ms,
   method: Method | Method[],
   path: string | string[],
-  _params: Params<Ms, I, Y, S, C, W>
+  params: Params<Ms, I, Y, S, C, W>
 ): Build<Ms, I, Y, S, C, W> {
-  const _build = FUNCTIONS.AsyncGenerator.build<
-    I,
-    Y,
-    z.ZodVoid,
-    z.ZodVoid,
-    S,
-    C,
-    W
-  >({
-    ..._params,
+  const extra: ExtraParams = {
+    description: params.description,
+    security: params.security,
+    summary: params.summary,
+    tags: params.tags,
+  };
+  const _build = FUNCTIONS.AsyncGenerator.build({
+    ...params,
+    next: z.void(),
+    output: z.void(),
     func: ({ input, context }: { context: C; input: I["_output"] }) =>
-      _params.func({ context, build, ...input }),
-  } as never);
+      params.func({ context, build, ...input }),
+  });
 
   const build: Build<Ms, I, Y, S, C, W> = Object.assign(
     ({ context, ...input }: { context: FUNCTIONS.Context } & I["_input"]) =>
       _build({ context, input }),
     _build,
+    extra,
     {
       endpoint: "sse",
       middlewares,
       method: Array.isArray(method) ? method : [method],
       path: Array.isArray(path) ? path : [path],
-    }
-  ) as never;
+    } as const
+  );
   return build;
 }

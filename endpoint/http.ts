@@ -68,9 +68,7 @@ export type Build<
   C extends FUNCTIONS.Context = FUNCTIONS.Context,
   W extends Wrappers<I, O, S, C> = Wrappers<I, O, S, C>
 > = ((
-  arg: {
-    context: FUNCTIONS.Context;
-  } & I["_input"]
+  arg: { context: FUNCTIONS.Context } & I["_input"]
 ) => Promise<O["_output"]>) &
   Pick<
     FUNCTIONS.AsyncFunction.Build<I, O, S, C, W>,
@@ -86,7 +84,7 @@ export type Build<
  * @param middlewares
  * @param method
  * @param path
- * @param _params
+ * @param params
  * @returns
  *
  * @example
@@ -125,23 +123,31 @@ export function build<
   middlewares: Ms,
   method: Method | Method[],
   path: string | string[],
-  _params: Params<Ms, I, O, S, C, W>
+  params: Params<Ms, I, O, S, C, W>
 ): Build<Ms, I, O, S, C, W> {
-  const _build = FUNCTIONS.AsyncFunction.build<I, O, S, C, W>({
-    ..._params,
+  const extra: ExtraParams = {
+    description: params.description,
+    reqMediaTypes: params.reqMediaTypes,
+    resMediaTypes: params.resMediaTypes,
+    security: params.security,
+    summary: params.summary,
+    tags: params.tags,
+  };
+  const _build = FUNCTIONS.AsyncFunction.build({
+    ...params,
     func: ({ input, context }: { context: C; input: I["_output"] }) =>
-      _params.func({ context, build, ...input }),
-  } as never);
-  const build: Build<Ms, I, O, S, C, W> = Object.assign(
-    ({ context, ...input }: { context: FUNCTIONS.Context } & I["_input"]) =>
-      _build({ context, input }),
-    _build,
-    {
-      middlewares,
-      endpoint: "http",
-      method: Array.isArray(method) ? method : [method],
-      path: Array.isArray(path) ? path : [path],
-    }
-  ) as never;
+      params.func({ context, build, ...input }),
+  });
+  const func = ({
+    context,
+    ...input
+  }: { context: FUNCTIONS.Context } & I["_input"]) =>
+    _build({ context, input });
+  const build: Build<Ms, I, O, S, C, W> = Object.assign(func, _build, extra, {
+    middlewares,
+    endpoint: "http",
+    method: Array.isArray(method) ? method : [method],
+    path: Array.isArray(path) ? path : [path],
+  } as const);
   return build;
 }

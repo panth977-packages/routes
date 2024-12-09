@@ -47,9 +47,7 @@ export type Build<
   C extends FUNCTIONS.Context = FUNCTIONS.Context,
   W extends Wrappers<I, O, S, C> = Wrappers<I, O, S, C>
 > = ((
-  arg: {
-    context: FUNCTIONS.Context;
-  } & I["_input"]
+  arg: { context: FUNCTIONS.Context } & I["_input"]
 ) => Promise<O["_output"]>) &
   Pick<
     FUNCTIONS.AsyncFunction.Build<I, O, S, C, W>,
@@ -60,7 +58,7 @@ export type Build<
 
 /**
  * A complete builder with localized information for documenting middleware & building implementation with strict input/output schema
- * @param _params
+ * @param params
  * @returns
  *
  * @example
@@ -102,17 +100,24 @@ export function build<
   S extends Record<never, never>,
   C extends FUNCTIONS.Context,
   W extends Wrappers<I, O, S, C>
->(_params: Params<I, O, S, C, W>): Build<I, O, S, C, W> {
-  const _build = FUNCTIONS.AsyncFunction.build<I, O, S, C, W>({
-    ..._params,
+>(params: Params<I, O, S, C, W>): Build<I, O, S, C, W> {
+  const extra: ExtraParams = {
+    description: params.description,
+    security: params.security,
+    summary: params.summary,
+    tags: params.tags,
+  };
+  const _build = FUNCTIONS.AsyncFunction.build({
+    ...params,
     func: ({ input, context }: { context: C; input: I["_output"] }) =>
-      _params.func({ context, build, ...input }),
-  } as never);
+      params.func({ context, build, ...input }),
+  });
   const build: Build<I, O, S, C, W> = Object.assign(
     ({ context, ...input }: { context: FUNCTIONS.Context } & I["_input"]) =>
       _build({ context, input }),
     _build,
-    { endpoint: "middleware" }
-  ) as never;
+    extra,
+    { endpoint: "middleware" } as const
+  );
   return build;
 }
