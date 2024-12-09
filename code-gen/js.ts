@@ -433,7 +433,8 @@ const exe = FUNCTIONS.SyncFunction.build({
     createRoutesFor: true,
     createSchemaFor: true,
   }),
-  wrappers: (_) => [
+  wrappers: (_params) => [
+    FUNCTIONS.WRAPPERS.SafeParse({ _params }),
     function ({ context, input, func, build }) {
       json = input.json;
       options = input.options;

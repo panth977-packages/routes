@@ -3,19 +3,19 @@ import type { FUNCTIONS } from "@panth977/functions";
 
 /**
  * A Pipeline to create your endpoints.
- * 
+ *
  * @example
  * ```ts
  * const initMiddleware = ROUTE.Middleware.build(...);
  * const userAuthMiddleware = ROUTE.Middleware.build(...);
  * const thirdPartyAuthMiddleware = ROUTE.Middleware.build(...);
- * 
+ *
  * const EndpointFactory = ROUTE.Endpoint.build().addMiddleware(initMiddleware);
  * const endpoints = {
  *   userAuthorized: EndpointFactory.addMiddleware(userAuthMiddleware),
  *   thirdPartyAuthorized: EndpointFactory.addMiddleware(thirdPartyAuthMiddleware),
  * }
- * 
+ *
  * const getProfile = endpoints.userAuthorized.http('get', '/profile', ...);
  * const getProfile3rdParty = endpoints.thirdPartyAuthorized.http('get', '/api/{userId}/profile', ...);
  * ...;
@@ -35,7 +35,7 @@ export class Endpoint<Ms extends [] | [any, ...any[]]> {
     //
     I extends Middleware.zInput,
     O extends Middleware.zOutput,
-    S,
+    S extends Record<never, never>,
     C extends FUNCTIONS.Context,
     W extends Middleware.Wrappers<I, O, S, C>
   >(
@@ -50,9 +50,9 @@ export class Endpoint<Ms extends [] | [any, ...any[]]> {
     //
     I extends Http.zInput,
     O extends Http.zOutput,
-    S,
+    S extends Record<never, never>,
     C extends FUNCTIONS.Context,
-    W extends Http.Wrappers<Ms, I, O, S, C>
+    W extends Http.Wrappers<I, O, S, C>
   >(
     method: Http.Method,
     path: string,
@@ -65,9 +65,9 @@ export class Endpoint<Ms extends [] | [any, ...any[]]> {
     //
     I extends Sse.zInput,
     Y extends Sse.zYield,
-    S,
+    S extends Record<never, never>,
     C extends FUNCTIONS.Context,
-    W extends Sse.Wrappers<Ms, I, Y, S, C>
+    W extends Sse.Wrappers<I, Y, S, C>
   >(
     method: Sse.Method,
     path: string,
