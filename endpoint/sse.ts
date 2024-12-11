@@ -38,11 +38,26 @@ export type Params<
   W extends Wrappers<I, Y, S, C>
 > = Omit<
   FUNCTIONS.AsyncGenerator.Params<I, Y, z.ZodVoid, z.ZodVoid, S, C, W>,
-  "output" | "next" | "func"
+  "input" | "yield" | "next" | "output" | "func"
 > & {
+  request: I;
+  response: Y;
   func: (
     arg: { context: C; build: Build<Ms, I, Y, S, C, W> } & I["_output"]
   ) => AsyncGenerator<Y["_input"], void, void>;
+} & ExtraParams;
+
+type _Params<
+  Ms = Middleware.Build[],
+  I extends zInput = zInput,
+  Y extends zYield = zYield
+> = {
+  request: I;
+  response: Y;
+  path: string[];
+  method: Method[];
+  endpoint: "sse";
+  middlewares: Ms;
 } & ExtraParams;
 
 export type Build<
@@ -55,15 +70,14 @@ export type Build<
 > = ((
   arg: { context: FUNCTIONS.Context } & I["_input"]
 ) => AsyncGenerator<Y["_output"], void, void>) &
-  Pick<
-    FUNCTIONS.AsyncGenerator.Build<I, Y, z.ZodVoid, z.ZodVoid, S, C, W>,
-    keyof FUNCTIONS.AsyncGenerator.Build<I, Y, z.ZodVoid, z.ZodVoid, S, C, W>
-  > & {
-    path: string[];
-    method: Method[];
-    endpoint: "sse";
-    middlewares: Ms;
-  } & ExtraParams;
+  Omit<
+    Pick<
+      FUNCTIONS.AsyncGenerator.Build<I, Y, z.ZodVoid, z.ZodVoid, S, C, W>,
+      keyof FUNCTIONS.AsyncGenerator.Build<I, Y, z.ZodVoid, z.ZodVoid, S, C, W>
+    >,
+    ("input" | "yield" | "next" | "output") | keyof _Params
+  > &
+  _Params<Ms, I, Y>;
 
 /**
  * A complete builder with localized information for documenting sse route & building implementation with strict input/output schema
@@ -109,7 +123,13 @@ export function build<
   path: string | string[],
   params: Params<Ms, I, Y, S, C, W>
 ): Build<Ms, I, Y, S, C, W> {
-  const extra: ExtraParams = {
+  const extra: _Params<Ms, I, Y> = {
+    request: params.request,
+    response: params.response,
+    endpoint: "sse",
+    middlewares,
+    method: Array.isArray(method) ? method : [method],
+    path: Array.isArray(path) ? path : [path],
     description: params.description,
     security: params.security,
     summary: params.summary,
@@ -117,6 +137,8 @@ export function build<
   };
   const _build = FUNCTIONS.AsyncGenerator.build({
     ...params,
+    input: params.request,
+    yield: params.response,
     next: z.void(),
     output: z.void(),
     func: ({ input, context }: { context: C; input: I["_output"] }) =>
@@ -127,13 +149,7 @@ export function build<
     ({ context, ...input }: { context: FUNCTIONS.Context } & I["_input"]) =>
       _build({ context, input }),
     _build,
-    extra,
-    {
-      endpoint: "sse",
-      middlewares,
-      method: Array.isArray(method) ? method : [method],
-      path: Array.isArray(path) ? path : [path],
-    } as const
+    extra
   );
   return build;
 }

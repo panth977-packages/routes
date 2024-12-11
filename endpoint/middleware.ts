@@ -34,10 +34,21 @@ export type Params<
   S extends Record<never, never>,
   C extends FUNCTIONS.Context,
   W extends Wrappers<I, O, S, C>
-> = Omit<FUNCTIONS.AsyncFunction.Params<I, O, S, C, W>, "func"> & {
+> = Omit<
+  FUNCTIONS.AsyncFunction.Params<I, O, S, C, W>,
+  "func" | "input" | "output"
+> & {
+  request: I;
+  response: O;
   func: (
     arg: { context: C; build: Build<I, O, S, C, W> } & I["_output"]
   ) => Promise<O["_input"]>;
+} & ExtraParams;
+
+type _Params<I extends zInput = zInput, O extends zOutput = zOutput> = {
+  request: I;
+  response: O;
+  endpoint: "middleware";
 } & ExtraParams;
 
 export type Build<
@@ -49,12 +60,14 @@ export type Build<
 > = ((
   arg: { context: FUNCTIONS.Context } & I["_input"]
 ) => Promise<O["_output"]>) &
-  Pick<
-    FUNCTIONS.AsyncFunction.Build<I, O, S, C, W>,
-    keyof FUNCTIONS.AsyncFunction.Build<I, O, S, C, W>
-  > & {
-    endpoint: "middleware";
-  } & ExtraParams;
+  Omit<
+    Pick<
+      FUNCTIONS.AsyncFunction.Build<I, O, S, C, W>,
+      keyof FUNCTIONS.AsyncFunction.Build<I, O, S, C, W>
+    >,
+    ("input" | "output") | keyof _Params
+  > &
+  _Params<I, O>;
 
 /**
  * A complete builder with localized information for documenting middleware & building implementation with strict input/output schema
@@ -101,7 +114,10 @@ export function build<
   C extends FUNCTIONS.Context,
   W extends Wrappers<I, O, S, C>
 >(params: Params<I, O, S, C, W>): Build<I, O, S, C, W> {
-  const extra: ExtraParams = {
+  const extra: _Params<I, O> = {
+    endpoint: "middleware",
+    request: params.request,
+    response: params.response,
     description: params.description,
     security: params.security,
     summary: params.summary,
@@ -109,6 +125,8 @@ export function build<
   };
   const _build = FUNCTIONS.AsyncFunction.build({
     ...params,
+    input: params.request,
+    output: params.response,
     func: ({ input, context }: { context: C; input: I["_output"] }) =>
       params.func({ context, build, ...input }),
   });
@@ -116,8 +134,7 @@ export function build<
     ({ context, ...input }: { context: FUNCTIONS.Context } & I["_input"]) =>
       _build({ context, input }),
     _build,
-    extra,
-    { endpoint: "middleware" } as const
+    extra
   );
   return build;
 }

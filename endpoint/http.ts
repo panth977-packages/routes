@@ -51,13 +51,31 @@ export type Params<
   S extends Record<never, never>,
   C extends FUNCTIONS.Context,
   W extends Wrappers<I, O, S, C>
-> = Omit<FUNCTIONS.AsyncFunction.Params<I, O, S, C, W>, "func"> & {
+> = Omit<
+  FUNCTIONS.AsyncFunction.Params<I, O, S, C, W>,
+  "func" | "input" | "output"
+> & {
+  request: I;
+  response: O;
   func: (
     arg: {
       context: C;
       build: Build<Ms, I, O, S, C, W>;
     } & I["_output"]
   ) => Promise<O["_input"]>;
+} & ExtraParams;
+
+type _Params<
+  Ms = Middleware.Build[],
+  I extends zInput = zInput,
+  O extends zOutput = zOutput
+> = {
+  request: I;
+  response: O;
+  method: Method[];
+  path: string[];
+  endpoint: "http";
+  middlewares: Ms;
 } & ExtraParams;
 
 export type Build<
@@ -70,15 +88,14 @@ export type Build<
 > = ((
   arg: { context: FUNCTIONS.Context } & I["_input"]
 ) => Promise<O["_output"]>) &
-  Pick<
-    FUNCTIONS.AsyncFunction.Build<I, O, S, C, W>,
-    keyof FUNCTIONS.AsyncFunction.Build<I, O, S, C, W>
-  > & {
-    method: Method[];
-    path: string[];
-    endpoint: "http";
-    middlewares: Ms;
-  } & ExtraParams;
+  Omit<
+    Pick<
+      FUNCTIONS.AsyncFunction.Build<I, O, S, C, W>,
+      keyof FUNCTIONS.AsyncFunction.Build<I, O, S, C, W>
+    >,
+    ("input" | "output") | keyof _Params
+  > &
+  _Params<Ms, I, O>;
 /**
  * A complete builder with localized information for documenting http route & building implementation with strict input/output schema
  * @param middlewares
@@ -125,7 +142,13 @@ export function build<
   path: string | string[],
   params: Params<Ms, I, O, S, C, W>
 ): Build<Ms, I, O, S, C, W> {
-  const extra: ExtraParams = {
+  const extra: _Params<Ms, I, O> = {
+    middlewares,
+    endpoint: "http",
+    method: Array.isArray(method) ? method : [method],
+    path: Array.isArray(path) ? path : [path],
+    request: params.request,
+    response: params.response,
     description: params.description,
     reqMediaTypes: params.reqMediaTypes,
     resMediaTypes: params.resMediaTypes,
@@ -135,19 +158,16 @@ export function build<
   };
   const _build = FUNCTIONS.AsyncFunction.build({
     ...params,
+    input: params.request,
+    output: params.response,
     func: ({ input, context }: { context: C; input: I["_output"] }) =>
       params.func({ context, build, ...input }),
   });
-  const func = ({
-    context,
-    ...input
-  }: { context: FUNCTIONS.Context } & I["_input"]) =>
-    _build({ context, input });
-  const build: Build<Ms, I, O, S, C, W> = Object.assign(func, _build, extra, {
-    middlewares,
-    endpoint: "http",
-    method: Array.isArray(method) ? method : [method],
-    path: Array.isArray(path) ? path : [path],
-  } as const);
+  const build: Build<Ms, I, O, S, C, W> = Object.assign(
+    ({ context, ...input }: { context: FUNCTIONS.Context } & I["_input"]) =>
+      _build({ context, input }),
+    _build,
+    extra
+  );
   return build;
 }

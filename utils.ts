@@ -142,28 +142,28 @@ export function getRouteDocJson(
               (shape, middleware) =>
                 Object.assign(
                   shape,
-                  middleware.input.shape.headers?.shape ?? {}
+                  middleware.request.shape.headers?.shape ?? {}
                 ),
               {
-                ...(build.input.shape.headers?.shape ?? {}),
+                ...(build.request.shape.headers?.shape ?? {}),
               }
             )
           ),
           query: z.object(
             middlewares.reduce(
               (shape, middleware) =>
-                Object.assign(shape, middleware.input.shape.query?.shape ?? {}),
+                Object.assign(shape, middleware.request.shape.query?.shape ?? {}),
               {
-                ...(build.input.shape.query?.shape ?? {}),
+                ...(build.request.shape.query?.shape ?? {}),
               }
             )
           ),
-          path: z.object({ ...(build.input.shape.path?.shape ?? {}) }),
+          path: z.object({ ...(build.request.shape.path?.shape ?? {}) }),
         },
         requestBody: {
           content: {
             [build.reqMediaTypes ?? "application/json"]: {
-              schema: build.input.shape.body,
+              schema: build.request.shape.body,
             },
           },
         },
@@ -171,7 +171,7 @@ export function getRouteDocJson(
           default: {
             content: {
               [build.resMediaTypes ?? "application/json"]: {
-                schema: build.output.shape.body,
+                schema: build.response.shape.body,
               },
             },
             headers: z.object(
@@ -179,10 +179,10 @@ export function getRouteDocJson(
                 (shape, middleware) =>
                   Object.assign(
                     shape,
-                    middleware.output.shape.headers?.shape ?? {}
+                    middleware.response.shape.headers?.shape ?? {}
                   ),
                 {
-                  ...(build.output.shape.headers?.shape ?? {}),
+                  ...(build.response.shape.headers?.shape ?? {}),
                 }
               )
             ),
@@ -207,7 +207,7 @@ export function getRouteDocJson(
               (shape, middleware) =>
                 Object.assign(
                   shape,
-                  middleware.input.shape.headers?.shape ?? {}
+                  middleware.request.shape.headers?.shape ?? {}
                 ),
               {}
             )
@@ -215,13 +215,13 @@ export function getRouteDocJson(
           query: z.object(
             middlewares.reduce(
               (shape, middleware) =>
-                Object.assign(shape, middleware.input.shape.query?.shape ?? {}),
+                Object.assign(shape, middleware.request.shape.query?.shape ?? {}),
               {
-                ...(build.input.shape.query?.shape ?? {}),
+                ...(build.request.shape.query?.shape ?? {}),
               }
             )
           ),
-          path: z.object({ ...(build.input.shape.path?.shape ?? {}) }),
+          path: z.object({ ...(build.request.shape.path?.shape ?? {}) }),
         },
         responses: {
           default: {
@@ -286,19 +286,19 @@ export type LifeCycle = {
   onResponse?(arg: {
     context: FUNCTIONS.Context;
     build: Middleware.Build;
-    res: null | z.infer<Middleware.Build["output"]>;
+    res: null | z.infer<Middleware.Build["response"]>;
     err: null | unknown;
   }): void;
   onResponse?(arg: {
     context: FUNCTIONS.Context;
     build: Http.Build;
-    res: null | z.infer<Http.Build["output"]>;
+    res: null | z.infer<Http.Build["response"]>;
     err: null | unknown;
   }): void;
   onResponse?(arg: {
     context: FUNCTIONS.Context;
     build: Sse.Build;
-    res: null | z.infer<Sse.Build["yield"]>;
+    res: null | z.infer<Sse.Build["response"]>;
     err: null | unknown;
   }): void;
 
