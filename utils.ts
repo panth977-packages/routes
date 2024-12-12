@@ -292,12 +292,12 @@ export type LifeCycle<Opt> = {
   init(
     context: FUNCTIONS.Context,
     opt: Opt
-  ): {
+  ): Promise<{
     headers?: Record<string, string | string[]>;
     path?: Record<string, string>;
     query?: Record<string, string | string[]>;
     body?: any;
-  };
+  }>;
 
   onStatusChange?(arg: {
     status: "start" | "complete";
@@ -358,13 +358,13 @@ export async function execute<Opt>({
   lc: LifeCycle<Opt>;
   opt: Opt;
 }): Promise<void> {
-  const { body, headers, path, query } = lc.init(context, opt);
+  const req = await lc.init(context, opt);
   lc.onStatusChange?.({ status: "start", context, build });
   try {
     for (const middleware of build.middlewares) {
       lc.onExecution?.({ context, build: middleware });
       try {
-        const res = await middleware({ context, headers, query });
+        const res = await middleware({ context, ...req });
         lc.onResponse?.({
           context,
           build: middleware,
@@ -386,7 +386,7 @@ export async function execute<Opt>({
     if (build.endpoint === "http") {
       lc.onExecution?.({ context, build });
       try {
-        const res = await build({ body, context, headers, path, query });
+        const res = await build({ context, ...req });
         lc.onResponse?.({ context, build: build, res: res, err: null });
       } catch (err) {
         lc.onResponse?.({ context, build: build, res: null, err: err });
@@ -397,7 +397,7 @@ export async function execute<Opt>({
     } else {
       lc.onExecution?.({ context, build });
       try {
-        for await (const res of build({ context, path, query })) {
+        for await (const res of build({ context, ...req })) {
           lc.onResponse?.({ context, build: build, res: res, err: null });
         }
       } catch (err) {
