@@ -16,8 +16,8 @@ import type { FUNCTIONS } from "@panth977/functions";
  *   thirdPartyAuthorized: EndpointFactory.addMiddleware(thirdPartyAuthMiddleware),
  * }
  *
- * const getProfile = endpoints.userAuthorized.http('get', '/profile', ...);
- * const getProfile3rdParty = endpoints.thirdPartyAuthorized.http('get', '/api/{userId}/profile', ...);
+ * const getProfile = endpoints.userAuthorized.HTTP('get', '/profile', ...);
+ * const getProfile3rdParty = endpoints.thirdPartyAuthorized.get('/api/{userId}/profile', ...);
  * ...;
  * ```
  */
@@ -46,20 +46,83 @@ export class Endpoint<Ms extends [] | [any, ...any[]]> {
   addTags(...tags: string[]): Endpoint<Ms> {
     return new Endpoint(this.middlewares, [...this.tags, ...tags]);
   }
-  http<
+  //
+  get<
     //
     I extends Http.zInput,
     O extends Http.zOutput,
     S extends Record<never, never>,
     C extends FUNCTIONS.Context,
     W extends Http.Wrappers<I, O, S, C>
-  >(
-    method: Http.Method,
-    path: string,
-    params: Http.Params<Ms, I, O, S, C, W>
-  ): Http.Build<Ms, I, O, S, C, W> {
+  >(path: string, params: Http.Params<Ms, I, O, S, C, W>) {
     params.tags = (params.tags ??= []).concat(this.tags);
-    return Http.build(this.middlewares, method, path, params);
+    return Http.build(this.middlewares, "get", path, params);
+  }
+  post<
+    //
+    I extends Http.zInput,
+    O extends Http.zOutput,
+    S extends Record<never, never>,
+    C extends FUNCTIONS.Context,
+    W extends Http.Wrappers<I, O, S, C>
+  >(path: string, params: Http.Params<Ms, I, O, S, C, W>) {
+    params.tags = (params.tags ??= []).concat(this.tags);
+    return Http.build(this.middlewares, "post", path, params);
+  }
+  patch<
+    //
+    I extends Http.zInput,
+    O extends Http.zOutput,
+    S extends Record<never, never>,
+    C extends FUNCTIONS.Context,
+    W extends Http.Wrappers<I, O, S, C>
+  >(path: string, params: Http.Params<Ms, I, O, S, C, W>) {
+    params.tags = (params.tags ??= []).concat(this.tags);
+    return Http.build(this.middlewares, "patch", path, params);
+  }
+  put<
+    //
+    I extends Http.zInput,
+    O extends Http.zOutput,
+    S extends Record<never, never>,
+    C extends FUNCTIONS.Context,
+    W extends Http.Wrappers<I, O, S, C>
+  >(path: string, params: Http.Params<Ms, I, O, S, C, W>) {
+    params.tags = (params.tags ??= []).concat(this.tags);
+    return Http.build(this.middlewares, "put", path, params);
+  }
+  delete<
+    //
+    I extends Http.zInput,
+    O extends Http.zOutput,
+    S extends Record<never, never>,
+    C extends FUNCTIONS.Context,
+    W extends Http.Wrappers<I, O, S, C>
+  >(path: string, params: Http.Params<Ms, I, O, S, C, W>) {
+    params.tags = (params.tags ??= []).concat(this.tags);
+    return Http.build(this.middlewares, "delete", path, params);
+  }
+  trace<
+    //
+    I extends Http.zInput,
+    O extends Http.zOutput,
+    S extends Record<never, never>,
+    C extends FUNCTIONS.Context,
+    W extends Http.Wrappers<I, O, S, C>
+  >(path: string, params: Http.Params<Ms, I, O, S, C, W>) {
+    params.tags = (params.tags ??= []).concat(this.tags);
+    return Http.build(this.middlewares, "trace", path, params);
+  }
+  options<
+    //
+    I extends Http.zInput,
+    O extends Http.zOutput,
+    S extends Record<never, never>,
+    C extends FUNCTIONS.Context,
+    W extends Http.Wrappers<I, O, S, C>
+  >(path: string, params: Http.Params<Ms, I, O, S, C, W>) {
+    params.tags = (params.tags ??= []).concat(this.tags);
+    return Http.build(this.middlewares, "options", path, params);
   }
   sse<
     //
@@ -69,8 +132,38 @@ export class Endpoint<Ms extends [] | [any, ...any[]]> {
     C extends FUNCTIONS.Context,
     W extends Sse.Wrappers<I, Y, S, C>
   >(
-    method: Sse.Method,
     path: string,
+    params: Sse.Params<Ms, I, Y, S, C, W>
+  ): Sse.Build<Ms, I, Y, S, C, W> {
+    (params.tags ??= []).concat(this.tags);
+    return Sse.build(this.middlewares, 'get', path, params);
+  }
+  //
+  HTTP<
+    //
+    I extends Http.zInput,
+    O extends Http.zOutput,
+    S extends Record<never, never>,
+    C extends FUNCTIONS.Context,
+    W extends Http.Wrappers<I, O, S, C>
+  >(
+    method: Http.Method | Http.Method[],
+    path: string | string[],
+    params: Http.Params<Ms, I, O, S, C, W>
+  ): Http.Build<Ms, I, O, S, C, W> {
+    params.tags = (params.tags ??= []).concat(this.tags);
+    return Http.build(this.middlewares, method, path, params);
+  }
+  SSE<
+    //
+    I extends Sse.zInput,
+    Y extends Sse.zYield,
+    S extends Record<never, never>,
+    C extends FUNCTIONS.Context,
+    W extends Sse.Wrappers<I, Y, S, C>
+  >(
+    method: Sse.Method | Sse.Method[],
+    path: string | string[],
     params: Sse.Params<Ms, I, Y, S, C, W>
   ): Sse.Build<Ms, I, Y, S, C, W> {
     (params.tags ??= []).concat(this.tags);

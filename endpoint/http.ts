@@ -108,8 +108,8 @@ export type Build<
  * ```ts
  * const getProfile = ROUTES.Http.build([authorize], "get", "/profile", {
  *   description: `Get user profile.`,
- *   input: ROUTES.z.HttpInput({}),
- *   output: ROUTES.z.HttpOutput({
+ *   request: ROUTES.z.HttpRequest({}),
+ *   response: ROUTES.z.HttpResponse({
  *     body: z.object({
  *       id: z.number(),
  *       username: z.string(),
@@ -121,8 +121,8 @@ export type Build<
  *     query: `Select * from users where id = ? LIMIT 1`,
  *   },
  *   async func({context, build}) {
- *     const { userId } = context.options.decodedToken;
- *     const result = await pg.query(build.static.query, [userId]);
+ *     const { userId } = context.useState(DecodedStateKey).get();
+ *     const result = await pg.query(build.query, [userId]);
  *     if (!result.rows.length) throw createHttpError.NotFound("Given user was not found in db, could be because someone has deleted the user.");
  *     return result.rows[0];
  *   },

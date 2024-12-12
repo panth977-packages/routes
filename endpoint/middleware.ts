@@ -76,6 +76,7 @@ export type Build<
  *
  * @example
  * ```ts
+ * const DecodedStateKey = FUNCTIONS.DefaultContextState.CreateKey<ReturnType<typeof decodeToken>>({ label: 'Decoded',scope: 'global' });
  * const authorize = ROUTES.Middleware.build({
  *   security: {
  *     JwtAuth: {
@@ -85,16 +86,10 @@ export type Build<
  *       in: "header",
  *     },
  *   },
- *   input: ROUTES.z.MiddlewareInput({ // this schema will be used to address route request schema, in documentation
+ *   request: ROUTES.z.MiddlewareRequest({ // this schema will be used to address route request schema, in documentation
  *     headers: z.object({ "x-auth-token": z.string() }).passthrough(),
  *   }),
- *   output: ROUTES.z.MiddlewareOutput({ // same goes for route response schema
- *     options: z.object({
- *       decodedToken: z.object({
- *         userId: z.number(),
- *       }),
- *     }),
- *   }),
+ *   response: ROUTES.z.MiddlewareResponse({}),
  *   async func({context, headers}) {
  *     const token =
  *       headers["x-auth-token"] ??
@@ -102,7 +97,8 @@ export type Build<
  *       headers["x-token"];
  *     const decoded = await decodeToken(token);
  *     if (!decoded) throw createHttpError.Unauthorized("Token not found / Token got Expired / Invalid Token!");
- *     return { options: { decodedToken: decoded } };
+ *     context.useState(DecodedStateKey).set(decoded);
+ *     return {};
  *   },
  * });
  * ```

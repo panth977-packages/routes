@@ -9,7 +9,7 @@ export type zInput = z.ZodObject<{
   path?: z.AnyZodObject;
   query?: z.AnyZodObject;
 }>;
-export type zYield = z.ZodString;
+export type zYield = z.ZodType<string, z.ZodTypeDef, any>;
 export type ExtraParams = {
   tags?: ZodOpenApiOperationObject["tags"];
   summary?: ZodOpenApiOperationObject["summary"];
@@ -90,12 +90,12 @@ export type Build<
  * @example
  * ```ts
  * export const getLogs = ROUTES.Sse.build([systemAuthorized], "get", "/logs/{requestId}", {
- *   input: ROUTES.z.SseInput({
+ *   request: ROUTES.z.SseRequest({
  *     path: z.object({
  *       requestId: z.string(),
  *     }),
  *   }),
- *   yield: ROUTES.z.SseYield(),
+ *   response: ROUTES.z.SseResponse(),
  *   async *func({context, path: { requestId }}) {
  *     let logs = [];
  *     let offset = 0;

@@ -38,12 +38,12 @@ import type { Sse, Http, Middleware } from "./endpoint/index.ts";
  * console.log(routes) // {route1: ..., route2: ..., route3: ..., route4: ...}
  * ```
  */
-export function getEndpointsFromBundle<B extends Record<never, never>>({
+export function getEndpointsFromBundle({
   bundle,
   excludeTags,
   includeTags,
 }: {
-  bundle: B;
+  bundle: Record<string, any>;
   includeTags?: string[];
   excludeTags?: string[];
 }): Record<string, Http.Build | Sse.Build> {
@@ -97,12 +97,25 @@ export function getEndpointsFromBundle<B extends Record<never, never>>({
   }
   return allReady;
 }
-
 /**
  * Document your routes by simply passing your endpoint bundle, and get a open-api.json
  * @param docEndpoints
  * @param params
  * @returns
+ *
+ * @example
+ * ```ts
+ * const routes = ROUTES.getEndpointsFromBundle({
+ *   bundle: await import('./routes/index.ts'),
+ *   excludeTags: ['internal-apis'],
+ * }); // strong type will be lost
+ * const OpenApiJson = ROUTES.getRouteDocJson(routes, {
+ *   info: {
+ *     title: 'My Apis',
+ *     version: '0.0.1',
+ *   }
+ * });
+ * ```
  */
 export function getRouteDocJson(
   docEndpoints: Record<string, Http.Build | Sse.Build>,
@@ -152,7 +165,10 @@ export function getRouteDocJson(
           query: z.object(
             middlewares.reduce(
               (shape, middleware) =>
-                Object.assign(shape, middleware.request.shape.query?.shape ?? {}),
+                Object.assign(
+                  shape,
+                  middleware.request.shape.query?.shape ?? {}
+                ),
               {
                 ...(build.request.shape.query?.shape ?? {}),
               }
@@ -215,7 +231,10 @@ export function getRouteDocJson(
           query: z.object(
             middlewares.reduce(
               (shape, middleware) =>
-                Object.assign(shape, middleware.request.shape.query?.shape ?? {}),
+                Object.assign(
+                  shape,
+                  middleware.request.shape.query?.shape ?? {}
+                ),
               {
                 ...(build.request.shape.query?.shape ?? {}),
               }
@@ -269,7 +288,17 @@ export function pathParser(path: string): string[] {
   return [...(path.match(/{([^}]+)}/g) ?? [])];
 }
 
-export type LifeCycle = {
+export type LifeCycle<Opt> = {
+  init(
+    context: FUNCTIONS.Context,
+    opt: Opt
+  ): {
+    headers?: Record<string, string | string[]>;
+    path?: Record<string, string>;
+    query?: Record<string, string | string[]>;
+    body?: any;
+  };
+
   onStatusChange?(arg: {
     status: "start" | "complete";
     context: FUNCTIONS.Context;
@@ -318,23 +347,18 @@ export type LifeCycle = {
  * @param cbs
  * @returns
  */
-export async function execute({
+export async function execute<Opt>({
   context,
   build,
   lc,
-  body,
-  headers,
-  path,
-  query,
+  opt,
 }: {
   context: FUNCTIONS.Context;
   build: Http.Build | Sse.Build;
-  headers?: Record<string, string | string[]>;
-  path?: Record<string, string>;
-  query?: Record<string, string | string[]>;
-  body?: any;
-  lc: LifeCycle;
+  lc: LifeCycle<Opt>;
+  opt: Opt;
 }): Promise<void> {
+  const { body, headers, path, query } = lc.init(context, opt);
   lc.onStatusChange?.({ status: "start", context, build });
   try {
     for (const middleware of build.middlewares) {

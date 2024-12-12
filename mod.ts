@@ -6,12 +6,12 @@
  * - {@link ROUTES.Sse.build}
  * 
  * # Schemas
- * - {@link ROUTES.z.MiddlewareInput}
- * - {@link ROUTES.z.MiddlewareOutput}
- * - {@link ROUTES.z.HttpInput}
- * - {@link ROUTES.z.HttpOutput}
- * - {@link ROUTES.z.SseInput}
- * - {@link ROUTES.z.SseYield}
+ * - {@link ROUTES.z.MiddlewareRequest}
+ * - {@link ROUTES.z.MiddlewareResponse}
+ * - {@link ROUTES.z.HttpRequest}
+ * - {@link ROUTES.z.HttpResponse}
+ * - {@link ROUTES.z.SseRequest}
+ * - {@link ROUTES.z.SseResponse}
  * - {@link ROUTES.z.is}
  * 
  * # Helper
