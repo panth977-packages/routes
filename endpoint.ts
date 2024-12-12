@@ -54,7 +54,10 @@ export class Endpoint<Ms extends [] | [any, ...any[]]> {
     S extends Record<never, never>,
     C extends FUNCTIONS.Context,
     W extends Http.Wrappers<I, O, S, C>
-  >(path: string, params: Http.Params<Ms, I, O, S, C, W>) {
+  >(
+    path: string,
+    params: Http.Params<Ms, I, O, S, C, W>
+  ): Http.Build<Ms, I, O, S, C, W> {
     params.tags = (params.tags ??= []).concat(this.tags);
     return Http.build(this.middlewares, "get", path, params);
   }
@@ -65,7 +68,10 @@ export class Endpoint<Ms extends [] | [any, ...any[]]> {
     S extends Record<never, never>,
     C extends FUNCTIONS.Context,
     W extends Http.Wrappers<I, O, S, C>
-  >(path: string, params: Http.Params<Ms, I, O, S, C, W>) {
+  >(
+    path: string,
+    params: Http.Params<Ms, I, O, S, C, W>
+  ): Http.Build<Ms, I, O, S, C, W> {
     params.tags = (params.tags ??= []).concat(this.tags);
     return Http.build(this.middlewares, "post", path, params);
   }
@@ -76,7 +82,10 @@ export class Endpoint<Ms extends [] | [any, ...any[]]> {
     S extends Record<never, never>,
     C extends FUNCTIONS.Context,
     W extends Http.Wrappers<I, O, S, C>
-  >(path: string, params: Http.Params<Ms, I, O, S, C, W>) {
+  >(
+    path: string,
+    params: Http.Params<Ms, I, O, S, C, W>
+  ): Http.Build<Ms, I, O, S, C, W> {
     params.tags = (params.tags ??= []).concat(this.tags);
     return Http.build(this.middlewares, "patch", path, params);
   }
@@ -87,7 +96,10 @@ export class Endpoint<Ms extends [] | [any, ...any[]]> {
     S extends Record<never, never>,
     C extends FUNCTIONS.Context,
     W extends Http.Wrappers<I, O, S, C>
-  >(path: string, params: Http.Params<Ms, I, O, S, C, W>) {
+  >(
+    path: string,
+    params: Http.Params<Ms, I, O, S, C, W>
+  ): Http.Build<Ms, I, O, S, C, W> {
     params.tags = (params.tags ??= []).concat(this.tags);
     return Http.build(this.middlewares, "put", path, params);
   }
@@ -98,7 +110,10 @@ export class Endpoint<Ms extends [] | [any, ...any[]]> {
     S extends Record<never, never>,
     C extends FUNCTIONS.Context,
     W extends Http.Wrappers<I, O, S, C>
-  >(path: string, params: Http.Params<Ms, I, O, S, C, W>) {
+  >(
+    path: string,
+    params: Http.Params<Ms, I, O, S, C, W>
+  ): Http.Build<Ms, I, O, S, C, W> {
     params.tags = (params.tags ??= []).concat(this.tags);
     return Http.build(this.middlewares, "delete", path, params);
   }
@@ -109,7 +124,10 @@ export class Endpoint<Ms extends [] | [any, ...any[]]> {
     S extends Record<never, never>,
     C extends FUNCTIONS.Context,
     W extends Http.Wrappers<I, O, S, C>
-  >(path: string, params: Http.Params<Ms, I, O, S, C, W>) {
+  >(
+    path: string,
+    params: Http.Params<Ms, I, O, S, C, W>
+  ): Http.Build<Ms, I, O, S, C, W> {
     params.tags = (params.tags ??= []).concat(this.tags);
     return Http.build(this.middlewares, "trace", path, params);
   }
@@ -120,7 +138,10 @@ export class Endpoint<Ms extends [] | [any, ...any[]]> {
     S extends Record<never, never>,
     C extends FUNCTIONS.Context,
     W extends Http.Wrappers<I, O, S, C>
-  >(path: string, params: Http.Params<Ms, I, O, S, C, W>) {
+  >(
+    path: string,
+    params: Http.Params<Ms, I, O, S, C, W>
+  ): Http.Build<Ms, I, O, S, C, W> {
     params.tags = (params.tags ??= []).concat(this.tags);
     return Http.build(this.middlewares, "options", path, params);
   }
@@ -136,7 +157,7 @@ export class Endpoint<Ms extends [] | [any, ...any[]]> {
     params: Sse.Params<Ms, I, Y, S, C, W>
   ): Sse.Build<Ms, I, Y, S, C, W> {
     (params.tags ??= []).concat(this.tags);
-    return Sse.build(this.middlewares, 'get', path, params);
+    return Sse.build(this.middlewares, "get", path, params);
   }
   //
   HTTP<
