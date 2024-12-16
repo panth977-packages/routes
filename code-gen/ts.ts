@@ -40,6 +40,7 @@ function createSchemaCode(
   }
   let nullable = false;
   if (Array.isArray(schema.type)) {
+    schema.type = [...new Set(schema.type)];
     if (schema.type.length === 1) {
       schema.type = schema.type[0];
     } else if (schema.type.length === 2) {
