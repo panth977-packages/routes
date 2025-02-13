@@ -40,6 +40,7 @@ export type Params<
   FUNCTIONS.AsyncGenerator.Params<I, Y, z.ZodVoid, z.ZodVoid, S, C, W>,
   "input" | "yield" | "next" | "output" | "func"
 > & {
+  docsOrder?: number;
   request: I;
   response: Y;
   func: (
@@ -58,6 +59,7 @@ type _Params<
   method: Method[];
   endpoint: "sse";
   middlewares: Ms;
+  docsOrder: number;
 } & ExtraParams;
 
 export type Build<
@@ -124,6 +126,7 @@ export function build<
   params: Params<Ms, I, Y, S, C, W>
 ): Build<Ms, I, Y, S, C, W> {
   const extra: _Params<Ms, I, Y> = {
+    docsOrder: params.docsOrder ?? Number.MAX_SAFE_INTEGER,
     request: params.request,
     response: params.response,
     endpoint: "sse",

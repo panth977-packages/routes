@@ -129,7 +129,7 @@ export function getRouteDocJson(
     {},
     params.components?.securitySchemes ?? {}
   );
-  for (const build of Object.values(docEndpoints)) {
+  for (const build of Object.values(docEndpoints).sort((x, y) => x.docsOrder - y.docsOrder)) {
     const middlewares = build.middlewares;
     const security = [
       ...middlewares.map((m) => m.security ?? {}),

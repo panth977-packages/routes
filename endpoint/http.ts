@@ -55,6 +55,7 @@ export type Params<
   FUNCTIONS.AsyncFunction.Params<I, O, S, C, W>,
   "func" | "input" | "output"
 > & {
+  docsOrder?: number;
   request: I;
   response: O;
   func: (
@@ -75,6 +76,7 @@ type _Params<
   method: Method[];
   path: string[];
   endpoint: "http";
+  docsOrder: number;
   middlewares: Ms;
 } & ExtraParams;
 
@@ -145,6 +147,7 @@ export function build<
   const extra: _Params<Ms, I, O> = {
     middlewares,
     endpoint: "http",
+    docsOrder: params.docsOrder ?? Number.MAX_SAFE_INTEGER,
     method: Array.isArray(method) ? method : [method],
     path: Array.isArray(path) ? path : [path],
     request: params.request,
