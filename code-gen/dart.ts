@@ -489,6 +489,7 @@ function createRouteCode(
   if (!options.code.includes(`class APIsBundlers`)) {
     options.code += `
 class APIsBundlers {
+  const APIsBundlers();
 }
     `;
   }
@@ -497,12 +498,13 @@ class APIsBundlers {
     if (!options.code.includes(`class ${tag}`)) {
       options.code += `
 class ${tag} {
+  const ${tag}();
 }
       `;
       options.code = options.code.replace(
         `class APIsBundlers {`,
         `class APIsBundlers {
-  static const build${tag}Api = ${tag}.build;`
+  final build${tag}Api = ${tag}.build;`
       );
     }
   }
@@ -700,7 +702,7 @@ class Api${name} extends BaseApiClass<Request${name}, Response${name}> {
     options.code = options.code.replace(
       `class ${tag} {`,
       `class ${tag} {
-    static const build${name}Api = Api${name}.build;`
+  final build${name}Api = Api${name}.build;`
     );
   }
   options.routesCreated[name] = name;
