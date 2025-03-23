@@ -330,9 +330,9 @@ class ${className} extends BaseMapClass<${keySchemaCode.type}, ${valueSchemaCode
           .filter(Boolean) // Remove empty strings
           .map((word, index) => {
             if (index === 0) {
-              return word.toLowerCase(); // First word stays lowercase
+              return word.charAt(0).toLowerCase() + word.slice(1);
             }
-            return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(); // Capitalize first letter
+            return word.charAt(0).toUpperCase() + word.slice(1);
           })
           .join("");
         if (props[propName].req) {
