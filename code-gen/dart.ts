@@ -504,12 +504,11 @@ class ${tag} {
       options.code = options.code.replace(
         `class APIsBundlers {`,
         `class APIsBundlers {
-  final build${tag}Api = ${tag}.build;`
+  final build${tag}Api = const ${tag}();`
       );
     }
   }
   if (!route) throw new Error("Unimplemented!");
-  route.tags;
   const name = route.operationId;
   if (!name)
     throw new Error(
