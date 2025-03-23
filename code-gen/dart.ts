@@ -1255,7 +1255,7 @@ class BaseMapClass<K extends JsonBind, T extends JsonBind> extends JsonBind impl
     assert(data is Map);
     return BaseMapClass((data as Map).map((key, value) => MapEntry(keyFactory(key), valueFactory(value))));
   }
-  static BaseMapClass<K, T> Function(dynamic data) parse<K extends BaseTypedClass<String>, T extends BaseTypedClass>(K Function(dynamic) keyFactory, T Function(dynamic) valueFactory) {
+  static BaseMapClass<K, T> Function(dynamic data) parse<K extends BaseTypedClass<String>, T extends JsonBind>(K Function(dynamic) keyFactory, T Function(dynamic) valueFactory) {
     return (data) {
       return BaseMapClass.fromJson(data, keyFactory, valueFactory);
     };
