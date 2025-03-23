@@ -18,11 +18,9 @@ import { FUNCTIONS } from "@panth977/functions";
 const optionsSchema: z.ZodObject<
   (typeof defaultOptionsSchema)["shape"] & {
     FactoryClassCode: z.ZodOptional<z.ZodBoolean>;
-    TriggerFunctionName: z.ZodDefault<z.ZodOptional<z.ZodString>>;
     CollapseSchema: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>;
   }
 > = defaultOptionsSchema.extend({
-  TriggerFunctionName: z.string().optional().default("trigger"),
   FactoryClassCode: z.boolean().optional(),
   CollapseSchema: z.boolean().optional().default(true),
 });
@@ -136,7 +134,6 @@ class ${className} extends NullableClass<${nonNullableSchema.type}> {
         parser: `NullableClass.parse(${nonNullableSchema.parser})`,
       };
     }
-    console.log(schema);
     if (schema.oneOf.length !== 1) throw new Error("Unimplemented!");
     return createSchemaCode(schema.oneOf[0], className);
   }
@@ -489,6 +486,12 @@ function createRouteCode(
   path: string,
   route: OperationObject | null | undefined
 ) {
+  if (!options.code.includes('class APIs')) {
+    options.code += `
+class APIs {
+}
+    `;
+  }
   if (!route) throw new Error("Unimplemented!");
   const name = route.operationId;
   if (!name)
@@ -672,13 +675,14 @@ class Response${name} extends ResponseClass<${responseHeaders.type}, ${
     return Response${name}(headers: _headerFactory(headers), body: _bodyFactory(body));
   }
 }
-class ${name} extends BaseApiClass<Request${name}, Response${name}> {
-  ${name}(super.request): super(path: ${JSON.stringify(
+class Api${name} extends BaseApiClass<Request${name}, Response${name}> {
+  Api${name}.build(super.request): super(path: ${JSON.stringify(
     path
   )}, method: ${methodEnum}, responseFactory: Response${name}.fromJson);
 }
   `;
-
+  options.code.replace('class APIs {', `class APIs {
+  const ${name} = Api${name}.build;`)
   options.routesCreated[name] = name;
   return name;
 }
@@ -690,7 +694,6 @@ function dependency($ref: string): string {
   if (!/^[a-zA-Z_$][a-zA-Z_$0-9]*$/.test(name))
     throw new Error("Ref name was expected to be valid variable name");
   if (name in options.dependencyCreated) return options.dependencyCreated[name];
-  console.log(name);
   createSchemaCode(json.components?.schemas?.[name], name);
   options.dependencyCreated[name] = name;
   return name;
