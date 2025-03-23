@@ -486,13 +486,28 @@ function createRouteCode(
   path: string,
   route: OperationObject | null | undefined
 ) {
-  if (!options.code.includes('class APIs')) {
+  if (!options.code.includes(`class APIsBundlers`)) {
     options.code += `
-class APIs {
+class APIsBundlers {
 }
     `;
   }
+  const tags = [...(route?.tags ?? []).map((x) => `${x}APIs`), "DefaultAPIs"];
+  for (const tag of tags) {
+    if (!options.code.includes(`class ${tag}`)) {
+      options.code += `
+class ${tag} {
+}
+      `;
+      options.code = options.code.replace(
+        `class APIsBundlers {`,
+        `class APIsBundlers {
+  static const build${tag}Api = ${tag}.build;`
+      );
+    }
+  }
   if (!route) throw new Error("Unimplemented!");
+  route.tags;
   const name = route.operationId;
   if (!name)
     throw new Error(
@@ -681,8 +696,13 @@ class Api${name} extends BaseApiClass<Request${name}, Response${name}> {
   )}, method: ${methodEnum}, responseFactory: Response${name}.fromJson);
 }
   `;
-  options.code.replace('class APIs {', `class APIs {
-  const ${name} = Api${name}.build;`)
+  for (const tag of tags) {
+    options.code = options.code.replace(
+      `class ${tag} {`,
+      `class ${tag} {
+    static const build${name}Api = Api${name}.build;`
+    );
+  }
   options.routesCreated[name] = name;
   return name;
 }
