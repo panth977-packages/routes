@@ -504,7 +504,7 @@ class ${tag} {
       options.code = options.code.replace(
         `class APIsBundlers {`,
         `class APIsBundlers {
-  final build${tag}Api = const ${tag}();`
+  final ${tag[0].toLowerCase()}${tag.slice(1)} = const ${tag}();`
       );
     }
   }
@@ -692,7 +692,7 @@ class Response${name} extends ResponseClass<${responseHeaders.type}, ${
   }
 }
 class Api${name} extends BaseApiClass<Request${name}, Response${name}> {
-  Api${name}.build(super.request): super(path: ${JSON.stringify(
+  Api${name}.build(Request${name} super.request): super(path: ${JSON.stringify(
     path
   )}, method: ${methodEnum}, responseFactory: Response${name}.fromJson);
 }
@@ -701,7 +701,7 @@ class Api${name} extends BaseApiClass<Request${name}, Response${name}> {
     options.code = options.code.replace(
       `class ${tag} {`,
       `class ${tag} {
-  final build${name}Api = Api${name}.build;`
+  final ${name[0].toLowerCase()}${name.slice(1)} = Api${name}.build;`
     );
   }
   options.routesCreated[name] = name;
