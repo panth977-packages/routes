@@ -1263,7 +1263,7 @@ class BaseMapClass<K extends JsonBind, T extends JsonBind> extends JsonBind impl
 
   @override
   toJson() {
-    return _val.map((key, value) => MapEntry(key, value.toJson()));
+    return _val.map((key, value) => MapEntry(key.toJson(), value.toJson()));
   }
 
   @override
