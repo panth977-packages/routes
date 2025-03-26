@@ -1368,15 +1368,15 @@ class BaseStructClass extends JsonBind {
     assert(required.intersection((data as Map).keys.toSet()).length == required.length);
     final json = <String, JsonBind?>{};
     for (final entry in (data as Map).entries) {
-      final factory = data[entry.key];
+      final factory = factories[entry.key];
       if (factory != null) {
         if (required.contains(entry.key)) {
-          json[entry.key] = factory(data[entry.key]);
+          json[entry.key] = factory(entry.value);
         } else {
-          if (data[entry.key] == null) {
+          if (entry.value == null) {
             json[entry.key] = null;
           } else {
-            json[entry.key] = entry.value(data[entry.key]);
+            json[entry.key] = factory(entry.value);
           }
         }
       } else if (passthroughFactory != null) {
