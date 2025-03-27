@@ -99,7 +99,7 @@ class ${className} extends NullableClass<${nonNullableSchema.type}> {
       }
       return {
         type: `NullableClass<${nonNullableSchema.type}>`,
-        parser: `NullableClass.parse(${nonNullableSchema.parser})`,
+        parser: `NullableClass.parse<${nonNullableSchema.type}>(${nonNullableSchema.parser})`,
       };
     }
     if (schema.type.length !== 1) throw new Error("Unimplemented!");
@@ -131,7 +131,7 @@ class ${className} extends NullableClass<${nonNullableSchema.type}> {
       }
       return {
         type: `NullableClass<${nonNullableSchema.type}>`,
-        parser: `NullableClass.parse(${nonNullableSchema.parser})`,
+        parser: `NullableClass.parse<${nonNullableSchema.type}>(${nonNullableSchema.parser})`,
       };
     }
     if (schema.oneOf.length !== 1) throw new Error("Unimplemented!");
@@ -171,7 +171,7 @@ class ${className} extends BaseListClass<${itemSchemaCode.type}> {
     }
     return {
       type: `BaseListClass<${itemSchemaCode.type}>`,
-      parser: `BaseListClass.parse(${itemSchemaCode.parser})`,
+      parser: `BaseListClass.parse<${itemSchemaCode.type}>(${itemSchemaCode.parser})`,
     };
   }
   if (schema.discriminator) {
@@ -229,7 +229,7 @@ class ${className} extends BaseDiscriminatorClass<${className}Mixin> {
     }
     return {
       type: `BaseDiscriminatorClass<BaseStructClass>`,
-      parser: `BaseDiscriminatorClass.parse(${param}, {${mapping.join(",")}})`,
+      parser: `BaseDiscriminatorClass.parse<BaseStructClass>(${param}, {${mapping.join(",")}})`,
     };
   }
   if (
@@ -257,7 +257,7 @@ class ${className} extends BaseMapClass<${keySchemaCode.type}, ${valueSchemaCode
       return { type: className, parser: `${className}.parse()` };
     }
     return {
-      parser: `BaseMapClass.parse(${keySchemaCode.parser}, ${valueSchemaCode.parser})`,
+      parser: `BaseMapClass.parse<${keySchemaCode.type}, ${valueSchemaCode.type}>(${keySchemaCode.parser}, ${valueSchemaCode.parser})`,
       type: `BaseMapClass<${keySchemaCode.type}, ${valueSchemaCode.type}>`,
     };
   }
@@ -1243,8 +1243,8 @@ class BaseListClass<T extends JsonBind> extends JsonBind implements List<T> {
   }
 
   @override
-  Iterable<T> whereType<T>() {
-    return _val.whereType<T>();
+  Iterable<E> whereType<E>() {
+    return _val.whereType<E>();
   }
 }
 
