@@ -1485,8 +1485,8 @@ class BaseApiClass<Request extends RequestClass, Response extends ResponseClass>
   BaseApiClass(this.request, {required this.path, required this.method, required this.responseFactory});
   final String path;
   final Method method;
-  final RequestClass request;
-  final ResponseClass Function(Map<String, dynamic> headers, dynamic body) responseFactory;
+  final Request request;
+  final Response Function(Map<String, dynamic> headers, dynamic body) responseFactory;
 }
 `;
 
