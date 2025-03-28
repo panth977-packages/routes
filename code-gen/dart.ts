@@ -229,7 +229,9 @@ class ${className} extends BaseDiscriminatorClass<${className}Mixin> {
     }
     return {
       type: `BaseDiscriminatorClass<BaseStructClass>`,
-      parser: `BaseDiscriminatorClass.parse<BaseStructClass>(${param}, {${mapping.join(",")}})`,
+      parser: `BaseDiscriminatorClass.parse<BaseStructClass>(${param}, {${mapping.join(
+        ","
+      )}})`,
     };
   }
   if (
@@ -554,13 +556,12 @@ class ${tag} {
     }
     return schemas;
   })();
-  const requestPath = parameters.filter((x) => x.required && x.in === "path")
-    .length
+  const requestPath = parameters.filter((x) => x.in === "path").length
     ? createSchemaCode(
         {
           type: "object",
           required: parameters
-            .filter((x) => x.required && x.in === "path")
+            .filter((x) => x.in === "path")
             .map((x) => x.name),
           properties: Object.fromEntries(
             parameters
@@ -572,8 +573,7 @@ class ${tag} {
         `${name}RequestParams`
       )
     : null;
-  const requestQuery = parameters.filter((x) => x.required && x.in === "query")
-    .length
+  const requestQuery = parameters.filter((x) => x.in === "query").length
     ? createSchemaCode(
         {
           type: "object",
@@ -590,9 +590,7 @@ class ${tag} {
         `${name}RequestQuery`
       )
     : null;
-  const requestHeaders = parameters.filter(
-    (x) => x.required && x.in === "header"
-  ).length
+  const requestHeaders = parameters.filter((x) => x.in === "header").length
     ? createSchemaCode(
         {
           type: "object",
@@ -614,7 +612,7 @@ class ${tag} {
       ? createSchemaCode(reqBody)
       : createSchemaCode(reqBody, `${name}RequestBody`)
     : null;
-  const responseHeaders = resHeaders.filter((x) => x.required).length
+  const responseHeaders = resHeaders.length
     ? createSchemaCode(
         {
           type: "object",
@@ -692,7 +690,7 @@ class Response${name} extends ResponseClass<${responseHeaders.type}, ${
   }
 }
 class Api${name} extends BaseApiClass<Request${name}, Response${name}> {
-  Api${name}.build(Request${name} super.request): super(path: ${JSON.stringify(
+  Api${name}.build(super.request): super(path: ${JSON.stringify(
     path
   )}, method: ${methodEnum}, responseFactory: Response${name}.fromJson);
 }
