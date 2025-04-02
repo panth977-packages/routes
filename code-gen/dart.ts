@@ -28,6 +28,7 @@ type Options = z.infer<typeof optionsSchema>;
 let options: Options = null as never;
 let json: OpenAPIObject = null as never;
 let structs: Record<string, { args: string[]; mixins: string[] }> = {};
+let enums = new Set<string>();
 
 function createSchemaCode(
   schema: SchemaObject | ReferenceObject | null | undefined,
@@ -410,8 +411,9 @@ class ${className} extends BaseStructClass with ${mixins.join(",")} {
     const initializers = [];
     const allowed = [];
     for (const s of constants) {
-      if (typeof s === "string" && /^[a-zA-Z_$][a-zA-Z_$0-9]*$/.test(s)) {
+      if (typeof s === "string" && /^[a-zA-Z_$][a-zA-Z_$0-9]*$/.test(s) && !enums.has(s)) {
         initializers.push(`const ${s} = ${enumName}._(${JSON.stringify(s)});`);
+        enums.add(s);
       }
       allowed.push(JSON.stringify(s));
     }
@@ -1513,6 +1515,7 @@ const exe = FUNCTIONS.SyncFunction.build({
       json = input.json;
       options = input.options;
       structs = {};
+      enums = new Set();
       return func({ context, input, build });
     },
   ],
