@@ -410,7 +410,9 @@ class ${className} extends BaseStructClass with ${mixins.join(",")} {
     const initializers = [];
     const allowed = [];
     for (const s of constants) {
-      initializers.push(`const ${s} = ${enumName}._(${JSON.stringify(s)});`);
+      if (typeof s === "string" && /^[a-zA-Z_$][a-zA-Z_$0-9]*$/.test(s)) {
+        initializers.push(`const ${s} = ${enumName}._(${JSON.stringify(s)});`);
+      }
       allowed.push(JSON.stringify(s));
     }
     if (className) {
@@ -429,7 +431,15 @@ class ${className} extends BaseLiteralClass {
         `;
       return { type: className, parser: `${className}.parse()` };
     }
-
+    if (initializers.length) {
+      if (!options.code.includes(`class Literals {`))
+        options.code += `\nclass Literals {\n}`;
+      options.code = options.code.replace(
+        `class Literals {`,
+        `class Literals {
+  ${initializers.join("\n  ")}`
+      );
+    }
     return {
       type: enumName,
       parser: `BaseLiteralClass.parse(const {${allowed.join(",")}})`,
