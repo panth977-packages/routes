@@ -412,7 +412,7 @@ class ${className} extends BaseStructClass with ${mixins.join(",")} {
     const allowed = [];
     for (const s of constants) {
       if (typeof s === "string" && /^[a-zA-Z_$][a-zA-Z_$0-9]*$/.test(s) && !enums.has(s)) {
-        initializers.push(`const ${s} = ${enumName}._(${JSON.stringify(s)});`);
+        initializers.push(`static const literal${s[0].toUpperCase()}${s.slice(1)} = ${enumName}._(${JSON.stringify(s)});`);
         enums.add(s);
       }
       allowed.push(JSON.stringify(s));
