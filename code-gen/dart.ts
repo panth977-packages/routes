@@ -88,10 +88,10 @@ class ${className} extends ${refSchema.type} {
 class ${className} extends NullableClass<${nonNullableSchema.type}> {
   ${className}(super._val) : super();
   static final _factory = ${nonNullableSchema.parser};
-  factory ${className}.fromJson(dynamic data) {
-    return ${className}(NullableClass.fromJson(data, _factory)._val);
+  factory ${className}.fromJson(dynamic data, List<String> path) {
+    return ${className}(NullableClass.fromJson(data, _factory, path)._val);
   }
-  static ${className} Function(dynamic data) parse() {
+  static ${className} Function(dynamic data, List<String> path) parse() {
     return ${className}.fromJson;
   }
 }
@@ -120,10 +120,10 @@ class ${className} extends NullableClass<${nonNullableSchema.type}> {
 class ${className} extends NullableClass<${nonNullableSchema.type}> {
   ${className}(super._val) : super();
   static final _factory = ${nonNullableSchema.parser};
-  factory ${className}.fromJson(dynamic data) {
-    return ${className}(NullableClass.fromJson(data, _factory)._val);
+  factory ${className}.fromJson(dynamic data, List<String> path) {
+    return ${className}(NullableClass.fromJson(data, _factory, path)._val);
   }
-  static ${className} Function(dynamic data) parse() {
+  static ${className} Function(dynamic data, List<String> path) parse() {
     return ${className}.fromJson;
   }
 }
@@ -157,10 +157,10 @@ class ${className} extends NullableClass<${nonNullableSchema.type}> {
 class ${className} extends BaseListClass<${itemSchemaCode.type}> {
   ${className}(super._val) : super();
   static final _itemFactory = ${itemSchemaCode.parser};
-  factory ${className}.fromJson(dynamic data) {
-    return ${className}(BaseListClass.fromJson(data, _itemFactory)._val);
+  factory ${className}.fromJson(dynamic data, List<String> path) {
+    return ${className}(BaseListClass.fromJson(data, _itemFactory, path)._val);
   }
-  static ${className} Function(dynamic data) parse() {
+  static ${className} Function(dynamic data, List<String> path) parse() {
     return ${className}.fromJson;
   }
 }
@@ -206,14 +206,14 @@ class ${className} extends BaseListClass<${itemSchemaCode.type}> {
 mixin ${className}Mixin on BaseStructClass {}
 class ${className} extends BaseDiscriminatorClass<${className}Mixin> {
   ${className}(super._val) : super();
-  static final _factories = <String, ${className}Mixin Function(dynamic)>{
+  static final _factories = <String, ${className}Mixin Function(dynamic, List<String>)>{
     ${mapping.join(",\n    ")}
   };
   static const _param = ${param};
-  factory ${className}.fromJson(dynamic data) {
-    return ${className}(BaseDiscriminatorClass<${className}Mixin>.fromJson(data, _param, _factories)._val);
+  factory ${className}.fromJson(dynamic data, List<String> path) {
+    return ${className}(BaseDiscriminatorClass<${className}Mixin>.fromJson(data, _param, _factories, path)._val);
   }
-  static ${className} Function(dynamic data) parse() {
+  static ${className} Function(dynamic data, List<String> path) parse() {
     return ${className}.fromJson;
   }
   ${getters.join("\n  ")}
@@ -249,10 +249,10 @@ class ${className} extends BaseMapClass<${keySchemaCode.type}, ${valueSchemaCode
   ${className}(super._val) : super();
   static final _keyFactory = ${keySchemaCode.parser};
   static final _valueFactory = ${valueSchemaCode.parser};
-  factory ${className}.fromJson(dynamic data) {
-    return ${className}(BaseMapClass.fromJson(data, _keyFactory, _valueFactory)._val);
+  factory ${className}.fromJson(dynamic data, List<String> path) {
+    return ${className}(BaseMapClass.fromJson(data, _keyFactory, _valueFactory, path)._val);
   }
-  static ${className} Function(dynamic data) parse() {
+  static ${className} Function(dynamic data, List<String> path) parse() {
     return ${className}.fromJson;
   }
 }
@@ -375,16 +375,16 @@ mixin ${className}Mixin on BaseStructClass {
 class ${className} extends BaseStructClass with ${mixins.join(",")} {
   ${className}({${args.join(",")}}) : super({${mappingArgs.join(",")}});
   ${className}._(super._val) : super();
-  static final _factories = {
+  static final _factories = <String, JsonBind Function(dynamic, List<String>)>{
     ${factories.map((x) => `...${x}`).join(",\n    ")}
   };
-  static const _required = {
+  static const _required = <String>{
     ${required.map((x) => `...${x}`).join(",\n    ")}
   };
-  factory ${className}.fromJson(dynamic data) {
-    return ${className}._(BaseStructClass.fromJson(data, _factories, _required)._val);
+  factory ${className}.fromJson(dynamic data, List<String> path) {
+    return ${className}._(BaseStructClass.fromJson(data, _factories, _required, null, path)._val);
   }
-  static ${className} Function(dynamic data) parse() {
+  static ${className} Function(dynamic data, List<String> path) parse() {
     return ${className}.fromJson;
   }
 }
@@ -422,10 +422,10 @@ class ${className} extends BaseStructClass with ${mixins.join(",")} {
 class ${className} extends BaseLiteralClass {
   const ${className}._(super._val): super._();
   static const _allowed = {${allowed.join(",")}};
-  static ${className} Function(dynamic data) parse() {
+  static ${className} Function(dynamic data, List<String> path) parse() {
     final parser = BaseLiteral.parse(_allowed);
-    return (data) {
-      return ${className}._(parser(data)._val);
+    return (data, path) {
+      return ${className}._(parser(data, path)._val);
     };
   }
   ${initializers.join("\n  ")}
@@ -452,10 +452,10 @@ class ${className} extends BaseLiteralClass {
       options.code += `
 class ${className} extends BaseDateTimeClass {
   ${className}(super._dateTime) : super();
-  factory ${className}.fromJson(dynamic data) {
-    return ${className}(BaseDateTimeClass.fromJson(data));
+  factory ${className}.fromJson(dynamic data, List<String> path) {
+    return ${className}(BaseDateTimeClass.fromJson(data, path));
   }
-  static ${className} Function(dynamic data) parse() {
+  static ${className} Function(dynamic data, List<String> path) parse() {
     return ${className}.fromJson;
   }
 }
@@ -479,10 +479,10 @@ class ${className} extends BaseDateTimeClass {
     options.code += `
 class ${className} extends BaseTypedClass<${outputParserCode}> {
   ${className}(super._val) : super();
-  factory ${className}.fromJson(dynamic data) {
-    return ${className}(BaseTypedClass<${outputParserCode}>.fromJson(data)._val);
+  factory ${className}.fromJson(dynamic data, List<String> path) {
+    return ${className}(BaseTypedClass<${outputParserCode}>.fromJson(data, path)._val);
   }
-  static ${className} Function(dynamic data) parse() {
+  static ${className} Function(dynamic data, List<String> path) parse() {
     return ${className}.fromJson;
   }
 }
@@ -698,7 +698,7 @@ class Response${name} extends ResponseClass<${responseHeaders.type}, ${
   static final _headerFactory = ${responseHeaders.parser};
   static final _bodyFactory = ${responseBody.parser};
   factory Response${name}.fromJson(dynamic headers, dynamic body) {
-    return Response${name}(headers: _headerFactory(headers), body: _bodyFactory(body));
+    return Response${name}(headers: _headerFactory(headers, ["Response${name}", "headers"]), body: _bodyFactory(body, ["Response${name}", "body"]));
   }
 }
 class Api${name} extends BaseApiClass<Request${name}, Response${name}> {
@@ -732,6 +732,33 @@ function dependency($ref: string): string {
 
 const FactoryClassCode = `import 'dart:math';
 
+class DataParsingError extends Error {
+  final dynamic data;
+  final String factory;
+  final Map<String, dynamic> info;
+  final List<String> path;
+  DataParsingError({required this.data, required this.path, required this.factory, required this.info});
+
+  String get message {
+    final dataStr = data.toString();
+    return 'DataError:'
+        '\\tfactory: $factory'
+        '\\tpath: $path'
+        '\\tinfo: $info'
+        '\\tdata: \${dataStr.length > 150 ? '\${dataStr.substring(0, 70)}...\${dataStr.substring(dataStr.length - 70)}' : dataStr}';
+  }
+
+  @override
+  String toString() => message;
+}
+
+class DataRuntimeError extends Error {
+  final String message;
+  DataRuntimeError(this.message);
+  @override
+  String toString() => message;
+}
+
 abstract class JsonBind {
   const JsonBind();
   toJson();
@@ -744,20 +771,20 @@ abstract class JsonBind {
 class NullableClass<T extends JsonBind> extends JsonBind {
   final T? _val;
   const NullableClass(this._val);
-  factory NullableClass.fromJson(dynamic data, T Function(dynamic data) factory) {
+  factory NullableClass.fromJson(dynamic data, T Function(dynamic data, List<String> path) factory, List<String> path) {
     if (data == null) return NullableClass(null);
-    return NullableClass(factory(data));
+    return NullableClass(factory(data, path));
   }
-  static NullableClass<T> Function(dynamic data) parse<T extends JsonBind>(T Function(dynamic data) factory) {
-    return (data) {
-      return NullableClass.fromJson(data, factory);
+  static NullableClass<T> Function(dynamic data, List<String> path) parse<T extends JsonBind>(T Function(dynamic data, List<String> path) factory) {
+    return (data, path) {
+      return NullableClass.fromJson(data, factory, path);
     };
   }
 
   T? get val => _val;
   T get nonNullVal {
-    assert(_val != null);
-    return _val as T;
+    if (_val == null) throw DataRuntimeError("NullableClass.nonNullVal: is null");
+    return _val;
   }
 
   bool get isNull => _val == null;
@@ -782,13 +809,15 @@ class NullableClass<T extends JsonBind> extends JsonBind {
 class BaseTypedClass<T> extends JsonBind {
   final T _val;
   const BaseTypedClass(this._val);
-  factory BaseTypedClass.fromJson(dynamic data) {
-    assert(data is T);
+  factory BaseTypedClass.fromJson(dynamic data, List<String> path) {
+    if (data is! T) {
+      throw DataParsingError(factory: "BaseTypedClass.fromJson:", info: {'typeFound': data.runtimeType, 'expected': T}, path: path, data: data);
+    }
     return BaseTypedClass(data);
   }
   T get val => _val;
 
-  static BaseTypedClass<T> Function(dynamic data) parse<T>() {
+  static BaseTypedClass<T> Function(dynamic data, List<String> path) parse<T>() {
     return BaseTypedClass<T>.fromJson;
   }
 
@@ -807,11 +836,24 @@ class BaseTypedClass<T> extends JsonBind {
 
 class BaseLiteralClass extends JsonBind {
   final dynamic _val;
+  const BaseLiteralClass(this._val);
   const BaseLiteralClass._(this._val);
-  static BaseLiteralClass Function(dynamic data) parse(Set<dynamic> allowed) {
-    return (data) {
-      assert(data is int || data is double || data is bool || data is String || data == null);
-      assert(allowed.contains(data));
+  static BaseLiteralClass Function(dynamic data, List<String> path) parse(Set<dynamic> allowed) {
+    return (data, path) {
+      if (data is! int && data is! double && data is! bool && data is! String && data != null) {
+        throw DataParsingError(
+          factory: "BaseLiteralClass.parse:",
+          info: {
+            'typeFound': data.runtimeType,
+            'allowed': {int, double, bool, String, null},
+          },
+          path: path,
+          data: data,
+        );
+      }
+      if (!allowed.contains(data)) {
+        throw DataParsingError(factory: "BaseLiteralClass.parse:", info: {'valueFound': data, 'allowed': allowed}, path: path, data: data);
+      }
       return BaseLiteralClass._(data);
     };
   }
@@ -833,14 +875,18 @@ class BaseLiteralClass extends JsonBind {
 class BaseDateTimeClass extends JsonBind implements DateTime {
   final DateTime _val;
   const BaseDateTimeClass(this._val);
-  factory BaseDateTimeClass.fromJson(dynamic data) {
-    assert(data is String);
+  factory BaseDateTimeClass.fromJson(dynamic data, List<String> path) {
+    if (data is! String) {
+      throw DataParsingError(factory: "BaseDateTimeClass.fromJson:", info: {'typeFound': data.runtimeType, 'expected': String}, path: path, data: data);
+    }
     final date = DateTime.tryParse(data);
-    assert(date != null);
-    return BaseDateTimeClass(date!);
+    if (date == null) {
+      throw DataParsingError(factory: "BaseDateTimeClass.fromJson:", info: {'valueFound': data, 'expected': 'ISO 8601'}, path: path, data: data);
+    }
+    return BaseDateTimeClass(date);
   }
 
-  static BaseDateTimeClass Function(dynamic data) parse() {
+  static BaseDateTimeClass Function(dynamic data, List<String> path) parse() {
     return BaseDateTimeClass.fromJson;
   }
 
@@ -953,13 +999,15 @@ class BaseDateTimeClass extends JsonBind implements DateTime {
 class BaseListClass<T extends JsonBind> extends JsonBind implements List<T> {
   final List<T> _val;
   const BaseListClass(this._val);
-  factory BaseListClass.fromJson(dynamic data, T Function(dynamic) factory) {
-    assert(data is Iterable);
-    return BaseListClass((data as Iterable).map(factory).toList());
+  factory BaseListClass.fromJson(dynamic data, T Function(dynamic, List<String>) factory, List<String> path) {
+    if (data is! Iterable) {
+      throw DataParsingError(factory: "BaseListClass.fromJson:", info: {'typeFound': data.runtimeType, 'expected': Iterable}, path: path, data: data);
+    }
+    return BaseListClass(List.generate(data.length, (i) => factory(data.elementAt(i), [...path, '{BaseListClass element: $i}'])));
   }
-  static BaseListClass<T> Function(dynamic data) parse<T extends JsonBind>(T Function(dynamic) factory) {
-    return (data) {
-      return BaseListClass.fromJson(data, factory);
+  static BaseListClass<T> Function(dynamic data, List<String> path) parse<T extends JsonBind>(T Function(dynamic, List<String>) factory) {
+    return (data, path) {
+      return BaseListClass.fromJson(data, factory, path);
     };
   }
 
@@ -1261,13 +1309,18 @@ class BaseListClass<T extends JsonBind> extends JsonBind implements List<T> {
 class BaseMapClass<K extends JsonBind, T extends JsonBind> extends JsonBind implements Map<K, T> {
   final Map<K, T> _val;
   const BaseMapClass(this._val);
-  factory BaseMapClass.fromJson(dynamic data, K Function(dynamic) keyFactory, T Function(dynamic) valueFactory) {
-    assert(data is Map);
-    return BaseMapClass((data as Map).map((key, value) => MapEntry(keyFactory(key), valueFactory(value))));
+  factory BaseMapClass.fromJson(dynamic data, K Function(dynamic, List<String>) keyFactory, T Function(dynamic, List<String>) valueFactory, List<String> path) {
+    if (data is! Map) {
+      throw DataParsingError(factory: "BaseMapClass.fromJson:", info: {'typeFound': data.runtimeType, 'expected': Map}, path: path, data: data);
+    }
+    return BaseMapClass(data.map((key, value) => MapEntry(keyFactory(key, [...path, '{BaseMapClass key: $key}']), valueFactory(value, [...path, '{BaseMapClass value: $key}']))));
   }
-  static BaseMapClass<K, T> Function(dynamic data) parse<K extends BaseTypedClass<String>, T extends JsonBind>(K Function(dynamic) keyFactory, T Function(dynamic) valueFactory) {
-    return (data) {
-      return BaseMapClass.fromJson(data, keyFactory, valueFactory);
+  static BaseMapClass<K, T> Function(dynamic data, List<String> path) parse<K extends BaseTypedClass<String>, T extends JsonBind>(
+    K Function(dynamic, List<String>) keyFactory,
+    T Function(dynamic, List<String>) valueFactory,
+  ) {
+    return (data, path) {
+      return BaseMapClass.fromJson(data, keyFactory, valueFactory, path);
     };
   }
 
@@ -1373,31 +1426,45 @@ class BaseMapClass<K extends JsonBind, T extends JsonBind> extends JsonBind impl
 class BaseStructClass extends JsonBind {
   final Map<String, JsonBind?> _val;
   const BaseStructClass(this._val);
-  factory BaseStructClass.fromJson(dynamic data, Map<String, JsonBind Function(dynamic data)> factories, Set<String> required, [JsonBind Function(String key, dynamic data)? passthroughFactory]) {
-    assert(data is Map);
-    assert(required.intersection((data as Map).keys.toSet()).length == required.length);
+  factory BaseStructClass.fromJson(
+    dynamic data,
+    Map<String, JsonBind Function(dynamic data, List<String> path)> factories,
+    Set<String> required,
+    JsonBind Function(String key, dynamic data, List<String> path)? passthroughFactory,
+    List<String> path,
+  ) {
+    if (data is! Map) {
+      throw DataParsingError(factory: "BaseStructClass.fromJson:", info: {'typeFound': data.runtimeType, 'expected': Map}, path: path, data: data);
+    }
+    if (required.intersection(data.keys.toSet()).length != required.length) {
+      throw DataParsingError(factory: "BaseStructClass.fromJson:", info: {'requiredKeys': required, 'data': data}, path: path, data: data);
+    }
     final json = <String, JsonBind?>{};
-    for (final entry in (data as Map).entries) {
+    for (final entry in data.entries) {
       final factory = factories[entry.key];
       if (factory != null) {
         if (required.contains(entry.key)) {
-          json[entry.key] = factory(entry.value);
+          json[entry.key] = factory(entry.value, [...path, '{BaseStructClass required: \${entry.key}}']);
         } else {
           if (entry.value == null) {
             json[entry.key] = null;
           } else {
-            json[entry.key] = factory(entry.value);
+            json[entry.key] = factory(entry.value, [...path, '{BaseStructClass optional: \${entry.key}}']);
           }
         }
       } else if (passthroughFactory != null) {
-        json[entry.key] = passthroughFactory(entry.key, entry.value);
+        json[entry.key] = passthroughFactory(entry.key, entry.value, [...path, '{BaseStructClass passthrough: \${entry.key}}']);
       }
     }
     return BaseStructClass(json);
   }
-  static BaseStructClass Function(dynamic data) parse(Map<String, JsonBind Function(dynamic data)> factories, Set<String> required, [JsonBind Function(String key, dynamic data)? passthroughFactory]) {
-    return (data) {
-      return BaseStructClass.fromJson(data, factories, required, passthroughFactory);
+  static BaseStructClass Function(dynamic data, List<String> path) parse(
+    Map<String, JsonBind Function(dynamic data, List<String> path)> factories,
+    Set<String> required,
+    JsonBind Function(String key, dynamic data, List<String> path)? passthroughFactory,
+  ) {
+    return (data, path) {
+      return BaseStructClass.fromJson(data, factories, required, passthroughFactory, path);
     };
   }
 
@@ -1419,12 +1486,16 @@ class BaseStructClass extends JsonBind {
 
   T _get<T extends JsonBind?>(String key) {
     final val = _val[key];
-    assert(val is T);
-    return val as T;
+    if (val is! T) {
+      throw DataRuntimeError('BaseStructClass._get: \${key} is not \${T}, but \${val.runtimeType}, val: \${val}');
+    }
+    return val;
   }
 
-  void _set<T extends JsonBind?>(String key, T val) {
-    assert((val as dynamic) is T);
+  void _set<T extends JsonBind?>(String key, dynamic val) {
+    if (val is! T) {
+      throw DataRuntimeError('BaseStructClass._set: \${key} is not \${T}, but \${val.runtimeType}, val: \${val}');
+    }
     _val[key] = val;
   }
 }
@@ -1432,17 +1503,23 @@ class BaseStructClass extends JsonBind {
 class BaseDiscriminatorClass<T extends BaseStructClass> extends JsonBind {
   final T _val;
   const BaseDiscriminatorClass(this._val);
-  factory BaseDiscriminatorClass.fromJson(dynamic data, String key, Map<String, T Function(dynamic data)> factories) {
-    assert(data is Map);
+  factory BaseDiscriminatorClass.fromJson(dynamic data, String key, Map<String, T Function(dynamic data, List<String> path)> factories, List<String> path) {
+    if (data is! Map) {
+      throw DataParsingError(factory: "BaseDiscriminatorClass.fromJson:", info: {'typeFound': data.runtimeType, 'expected': Map}, path: path, data: data);
+    }
     final type = data[key];
-    assert(type is String);
+    if (type is! String) {
+      throw DataParsingError(factory: "BaseDiscriminatorClass.fromJson:", info: {'typeFound': type.runtimeType, 'expected': String}, path: path, data: data);
+    }
     final factory = factories[type];
-    assert(factory != null);
-    return BaseDiscriminatorClass(factory!(data));
+    if (factory == null) {
+      throw DataParsingError(factory: "BaseDiscriminatorClass.fromJson:", info: {'typeFound': type, 'expected': factories.keys}, path: path, data: data);
+    }
+    return BaseDiscriminatorClass(factory(data, [...path, '{BaseDiscriminatorClass $key: $type}']));
   }
-  static BaseDiscriminatorClass<T> Function(dynamic data) parse<T extends BaseStructClass>(String key, Map<String, T Function(dynamic data)> factories) {
-    return (data) {
-      return BaseDiscriminatorClass.fromJson(data, key, factories);
+  static BaseDiscriminatorClass<T> Function(dynamic data, List<String> path) parse<T extends BaseStructClass>(String key, Map<String, T Function(dynamic data, List<String> path)> factories) {
+    return (data, path) {
+      return BaseDiscriminatorClass.fromJson(data, key, factories, path);
     };
   }
 
@@ -1473,15 +1550,21 @@ class ResponseClass<Headers extends JsonBind, Body extends JsonBind> extends Jso
   final Headers headers;
   final Body body;
   ResponseClass({required this.body, required this.headers});
-  factory ResponseClass.fromJson(Map<String, dynamic> headers, dynamic body, Headers Function(dynamic headers) headersFactory, Body Function(dynamic body) bodyFactory) {
-    return ResponseClass<Headers, Body>(body: bodyFactory(body), headers: headersFactory(headers));
-  }
-  static ResponseClass<Headers, Body> Function(Map<String, dynamic> headers, dynamic body) parser<Headers extends JsonBind, Body extends JsonBind>(
-    Headers Function(dynamic headers) headersFactory,
-    Body Function(dynamic body) bodyFactory,
+  factory ResponseClass.fromJson(
+    Map<String, dynamic> headers,
+    dynamic body,
+    Headers Function(dynamic headers, List<String> path) headersFactory,
+    Body Function(dynamic body, List<String> path) bodyFactory,
+    List<String> path,
   ) {
-    return (headers, body) {
-      return ResponseClass.fromJson(headers, body, headersFactory, bodyFactory);
+    return ResponseClass<Headers, Body>(body: bodyFactory(body, [...path, '{ResponseClass body}']), headers: headersFactory(headers, [...path, '{ResponseClass headers}']));
+  }
+  static ResponseClass<Headers, Body> Function(Map<String, dynamic> headers, dynamic body, List<String> path) parser<Headers extends JsonBind, Body extends JsonBind>(
+    Headers Function(dynamic headers, List<String> path) headersFactory,
+    Body Function(dynamic body, List<String> path) bodyFactory,
+  ) {
+    return (headers, body, path) {
+      return ResponseClass.fromJson(headers, body, headersFactory, bodyFactory, path);
     };
   }
 
@@ -1496,7 +1579,7 @@ class BaseApiClass<Request extends RequestClass, Response extends ResponseClass>
   final String path;
   final Method method;
   final Request request;
-  final Response Function(Map<String, dynamic> headers, dynamic body) responseFactory;
+  final Response Function(Map<String, dynamic> headers, dynamic body, List<String> path) responseFactory;
 }
 `;
 
