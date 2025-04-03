@@ -395,7 +395,7 @@ class ${className} extends BaseStructClass with ${mixins.join(",")} {
     return {
       parser: `BaseStructClass.parse({${factories
         .map((x) => `...${x}`)
-        .join(",")}}, const {${required.map((x) => `...${x}`).join(",")}})`,
+        .join(",")}}, const {${required.map((x) => `...${x}`).join(",")}}, null)`,
       type: `BaseStructClass`,
     };
   }
@@ -638,7 +638,7 @@ class ${tag} {
       )
     : {
         type: "BaseLiteralClass",
-        parser: "((dynamic headers) => const BaseLiteralClass._(null))",
+        parser: "((dynamic headers, List<String> path) => const BaseLiteralClass._(null))",
       };
   const responseBody =
     "$ref" in resBody
@@ -1579,7 +1579,7 @@ class BaseApiClass<Request extends RequestClass, Response extends ResponseClass>
   final String path;
   final Method method;
   final Request request;
-  final Response Function(Map<String, dynamic> headers, dynamic body, List<String> path) responseFactory;
+  final Response Function(Map<String, dynamic> headers, dynamic body) responseFactory;
 }
 `;
 
