@@ -1,6 +1,6 @@
 {
   "name": "@panth977/routes",
-  "version": "0.2.32",
+  "version": "0.2.33",
   "license": "MIT",
   "exports": "./mod.ts",
   "tasks": {

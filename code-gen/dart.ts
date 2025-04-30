@@ -19,10 +19,12 @@ const optionsSchema: z.ZodObject<
   (typeof defaultOptionsSchema)["shape"] & {
     FactoryClassCode: z.ZodOptional<z.ZodBoolean>;
     CollapseSchema: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>;
+    MandatoryStructName: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>;
   }
 > = defaultOptionsSchema.extend({
   FactoryClassCode: z.boolean().optional(),
   CollapseSchema: z.boolean().optional().default(true),
+  MandatoryStructName: z.boolean().optional().default(true),
 });
 type Options = z.infer<typeof optionsSchema>;
 let options: Options = null as never;
@@ -32,7 +34,7 @@ let enums = new Set<string>();
 
 function createSchemaCode(
   schema: SchemaObject | ReferenceObject | null | undefined,
-  className?: string
+  className?: undefined | null | string
 ): { type: string; parser: string } {
   if (!schema || !Object.keys(schema).length) {
     return {
@@ -391,6 +393,9 @@ class ${className} extends BaseStructClass with ${mixins.join(",")} {
       `;
       structs[className] = { args, mixins };
       return { type: className, parser: `${className}.parse()` };
+    }
+    if (options.MandatoryStructName) {
+      throw new Error("MandatoryStructName but no struct name was provided!");
     }
     return {
       parser: `BaseStructClass.parse({${factories
@@ -1487,14 +1492,14 @@ class BaseStructClass extends JsonBind {
   T _get<T extends JsonBind?>(String key) {
     final val = _val[key];
     if (val is! T) {
-      throw DataRuntimeError('BaseStructClass._get: \${key} is not \${T}, but \${val.runtimeType}, val: \${val}');
+      throw DataRuntimeError('BaseStructClass._get: $key is not $T, but \${val.runtimeType}, val: $val');
     }
     return val;
   }
 
   void _set<T extends JsonBind?>(String key, dynamic val) {
     if (val is! T) {
-      throw DataRuntimeError('BaseStructClass._set: \${key} is not \${T}, but \${val.runtimeType}, val: \${val}');
+      throw DataRuntimeError('BaseStructClass._set: $key is not $T, but \${val.runtimeType}, val: $val');
     }
     _val[key] = val;
   }
