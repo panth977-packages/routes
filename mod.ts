@@ -1,37 +1,41 @@
 /**
  * # Endpoint
- * - {@link ROUTES.Endpoint}
- * - {@link ROUTES.Middleware.build}
- * - {@link ROUTES.Http.build}
- * - {@link ROUTES.Sse.build}
- * 
- * # Schemas
- * - {@link ROUTES.z.MiddlewareRequest}
- * - {@link ROUTES.z.MiddlewareResponse}
- * - {@link ROUTES.z.HttpRequest}
- * - {@link ROUTES.z.HttpResponse}
- * - {@link ROUTES.z.SseRequest}
- * - {@link ROUTES.z.SseResponse}
- * - {@link ROUTES.z.is}
- * 
- * # Helper
- * - {@link ROUTES.getRouteDocJson}
- * - {@link ROUTES.getEndpointsFromBundle}
- * - {@link ROUTES.execute}
- * - {@link ROUTES.pathParser}
- * 
- * # Code Generation
- * - {@link ROUTES.CodeGen.genJsCode}
- * - {@link ROUTES.CodeGen.genTsCode}
- * 
+ * - {@link R.Endpoint}
+ *
+ * # Middleware
+ * - {@link R.syncFuncMiddleware}
+ * - {@link R.asyncFuncMiddleware}
+ * - {@link R.asyncCbMiddleware}
+ * - {@link R.asyncCancelableCbMiddleware}
+ *
+ * # Http
+ * - {@link R.syncFuncHttp}
+ * - {@link R.asyncFuncHttp}
+ * - {@link R.asyncCbHttp}
+ * - {@link R.asyncCancelableCbHttp}
+ *
+ * # Sse
+ * - {@link R.subsCbSse}
+ * - {@link R.subsCancelableCbSse}
+ *
+ * # Context & Execution
+ * - {@link R.HttpContext}
+ * - {@link R.HttpExecutor}
+ * - {@link R.SseContext}
+ * - {@link R.SseExecutor}
+ *
+ * # Utils
+ * - {@link R.generateOpenAPI}
+ * - {@link R.getEndpointsFromBundle}
+ *
  * @module
- * 
+ *
  * @example
  * ```ts
- * import { ROUTES } from "@panth977/routes";
+ * import { R } from "@panth977/routes";
  *
- * ROUTES.{api}
+ * R.{api}
  * ```
  */
 
-export * as ROUTES from "./exports.ts";
+export * as R from "./exports.ts";

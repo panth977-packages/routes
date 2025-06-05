@@ -1,43 +1,26 @@
 {
   "version": "4",
   "specifiers": {
-    "jsr:@panth977/functions@0.2": "0.2.17",
-    "npm:crypto@1": "1.0.1",
-    "npm:zod-openapi@4": "4.2.3_zod@3.23.8",
-    "npm:zod@^3.23.0": "3.23.8",
-    "npm:zod@^3.24.2": "3.24.2"
+    "jsr:@panth977/functions@^1.0.9": "1.0.9",
+    "npm:zod@^3.25.0": "3.25.48"
   },
   "jsr": {
-    "@panth977/functions@0.2.17": {
-      "integrity": "3b57bb859b6d494dcd2cb3832ca2961cd1aca1eef5f5bc2e6e5089226873e18c",
+    "@panth977/functions@1.0.9": {
+      "integrity": "d1f934a3b93be7cb4b60dffebb5a0e76c8aefef6ebb498bf0d6bf94137aeb366",
       "dependencies": [
-        "npm:crypto",
-        "npm:zod@^3.23.0"
+        "npm:zod"
       ]
     }
   },
   "npm": {
-    "crypto@1.0.1": {
-      "integrity": "sha512-VxBKmeNcqQdiUQUW2Tzq0t377b54N2bMtXO/qiLa+6eRRmmC4qT3D4OnTGoT/U6O9aklQ/jTwbOtRMTTY8G0Ig=="
-    },
-    "zod-openapi@4.2.3_zod@3.23.8": {
-      "integrity": "sha512-i0SqpcdXfsvVWTIY1Jl3Tk421s9fBIkpXvaA86zDas+8FjfZjm+GX6ot6SPB2SyuHwUNTN02gE5uIVlYXlyrDQ==",
-      "dependencies": [
-        "zod@3.23.8"
-      ]
-    },
-    "zod@3.23.8": {
-      "integrity": "sha512-XBx9AXhXktjUqnepgTiE5flcKIYWi/rme0Eaj+5Y0lftuGBq+jyRu/md4WnuxqgP1ubdpNCsYEYPxrzVHD8d6g=="
-    },
-    "zod@3.24.2": {
-      "integrity": "sha512-lY7CDW43ECgW9u1TcT3IoXHflywfVqDYze4waEz812jR/bZ8FHDsl7pFQoSZTz5N+2NqRXs8GBwnAwo3ZNxqhQ=="
+    "zod@3.25.48": {
+      "integrity": "sha512-0X1mz8FtgEIvaxGjdIImYpZEaZMrund9pGXm3M6vM7Reba0e2eI71KPjSCGXBfwKDPwPoywf6waUKc3/tFvX2Q=="
     }
   },
   "workspace": {
     "dependencies": [
-      "jsr:@panth977/functions@0.2",
-      "npm:zod-openapi@4",
-      "npm:zod@^3.24.2"
+      "jsr:@panth977/functions@^1.0.9",
+      "npm:zod@^3.25.0"
     ]
   }
 }

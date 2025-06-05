@@ -1,136 +1,416 @@
-import type { z } from "zod";
-import { FUNCTIONS } from "@panth977/functions";
-import type { ZodOpenApiOperationObject } from "zod-openapi";
-import type { SecuritySchemeObject } from "../zod-openapi.ts";
+import { z } from "zod/v4";
+import { F } from "@panth977/functions";
+import type { SecurityScheme } from "../zod-openapi.ts";
 
-export type zInput = z.ZodObject<{
-  headers?: z.AnyZodObject;
-  query?: z.AnyZodObject;
+export type MiddlewareInput = z.ZodObject<{
+  headers: z.ZodOptional<z.ZodAny> | z.ZodObject<any>;
+  query: z.ZodOptional<z.ZodAny> | z.ZodObject<any>;
 }>;
-export type zOutput = z.ZodObject<{ headers?: z.AnyZodObject }>;
+export type MiddlewareOutput = z.ZodObject<{
+  headers: z.ZodOptional<z.ZodAny> | z.ZodObject<any>;
+  opt: z.ZodType;
+}>;
+export type MiddlewareTypes =
+  | F.FunctionTypes["SyncFunc"]
+  | F.FunctionTypes["AsyncFunc"]
+  | F.FunctionTypes["AsyncCb"]
+  | F.FunctionTypes["AsyncCancelableCb"];
+export type FuncMiddlewareExported<
+  I extends MiddlewareInput,
+  O extends MiddlewareOutput,
+  D extends F.FuncDeclaration,
+  Type extends MiddlewareTypes,
+> =
+  & F.FuncExposed<I, O, Type>
+  & { node: FuncMiddleware<I, O, D, Type> };
+/**
+ * Base Middleware Node [Is one of node used in Context.node]
+ */
+export class FuncMiddleware<
+  I extends MiddlewareInput,
+  O extends MiddlewareOutput,
+  D extends F.FuncDeclaration,
+  Type extends MiddlewareTypes,
+> extends F.Func<I, O, D, Type> {
+  readonly tags: string[];
+  readonly summary: string;
+  readonly description: string;
+  readonly security: Record<string, SecurityScheme>;
+  protected state: F.ContextState<z.infer<O["shape"]["opt"]>>;
+  constructor(
+    type: Type,
+    input: I,
+    output: O,
+    declaration: D,
+    wrappers: F.FuncWrapper<I, O, D, Type>[],
+    implementation: F.FuncImplementation<I, O, D, Type>,
+    ref: { namespace: string; name: string },
+    tags: string[],
+    summary: string,
+    description: string,
+    security: Record<string, SecurityScheme>,
+  ) {
+    super(type, input, output, declaration, wrappers, implementation, ref);
+    this.tags = tags;
+    this.summary = summary;
+    this.description = description;
+    this.security = security;
+    this.state = F.ContextState.Cascade("Middleware", "create&read");
+  }
 
-export type ExtraParams = {
-  tags?: ZodOpenApiOperationObject["tags"];
-  summary?: ZodOpenApiOperationObject["summary"];
-  description?: ZodOpenApiOperationObject["description"];
-  security?: Record<string, SecuritySchemeObject>;
-};
-
-export type WrapperBuild<
-  I extends zInput = zInput,
-  O extends zOutput = zOutput,
-  S extends Record<never, never> = Record<never, never>,
-  C extends FUNCTIONS.Context = FUNCTIONS.Context
-> = FUNCTIONS.AsyncFunction.WrapperBuild<I, O, S, C>;
-export type Wrappers<
-  I extends zInput = zInput,
-  O extends zOutput = zOutput,
-  S extends Record<never, never> = Record<never, never>,
-  C extends FUNCTIONS.Context = FUNCTIONS.Context
-> = [] | [WrapperBuild<I, O, S, C>, ...WrapperBuild<I, O, S, C>[]];
-export type Params<
-  I extends zInput,
-  O extends zOutput,
-  S extends Record<never, never>,
-  C extends FUNCTIONS.Context,
-  W extends Wrappers<I, O, S, C>
-> = Omit<
-  FUNCTIONS.AsyncFunction.Params<I, O, S, C, W>,
-  "func" | "input" | "output"
-> & {
-  request: I;
-  response: O;
-  func: (
-    arg: { context: C; build: Build<I, O, S, C, W> } & I["_output"]
-  ) => Promise<O["_input"]>;
-} & ExtraParams;
-
-type _Params<I extends zInput = zInput, O extends zOutput = zOutput> = {
-  request: I;
-  response: O;
-  endpoint: "middleware";
-} & ExtraParams;
-
-export type Build<
-  I extends zInput = zInput,
-  O extends zOutput = zOutput,
-  S extends Record<never, never> = Record<never, never>,
-  C extends FUNCTIONS.Context = FUNCTIONS.Context,
-  W extends Wrappers<I, O, S, C> = Wrappers<I, O, S, C>
-> = ((
-  arg: { context: FUNCTIONS.Context } & I["_input"]
-) => Promise<O["_output"]>) &
-  Omit<
-    Pick<
-      FUNCTIONS.AsyncFunction.Build<I, O, S, C, W>,
-      keyof FUNCTIONS.AsyncFunction.Build<I, O, S, C, W>
-    >,
-    ("input" | "output") | keyof _Params
-  > &
-  _Params<I, O>;
+  getOpt(context: F.Context): z.infer<O["shape"]["opt"]> | undefined {
+    return this.state.of(context);
+  }
+  static setOpt<
+    I extends MiddlewareInput,
+    O extends MiddlewareOutput,
+    D extends F.FuncDeclaration,
+    Type extends MiddlewareTypes,
+  >(
+    context: F.Context,
+    middleware: FuncMiddleware<I, O, D, Type>,
+    opt: z.infer<O["shape"]["opt"]>,
+  ) {
+    return middleware.state.set(context, opt);
+  }
+  addTags(...tags: string[]) {
+    this.tags.push(...tags);
+  }
+  addSecurity(schemeName: string, scheme: SecurityScheme) {
+    this.security[schemeName] = scheme;
+  }
+  override create(): FuncMiddlewareExported<I, O, D, Type> {
+    return super.create() as never;
+  }
+  get reqHeaders(): I["shape"]["headers"] {
+    return this.input.shape.headers;
+  }
+  get reqQuery(): I["shape"]["query"] {
+    return this.input.shape.query;
+  }
+  get resHeaders(): O["shape"]["headers"] {
+    return this.output.shape.headers;
+  }
+  get contextOpt(): O["shape"]["opt"] {
+    return this.output.shape.opt;
+  }
+}
 
 /**
- * A complete builder with localized information for documenting middleware & building implementation with strict input/output schema
- * @param params
- * @returns
- *
- * @example
+ * Base Middleware Builder, Use this to build a Func Node
+ */
+export class FuncMiddlewareBuilder<
+  I extends MiddlewareInput,
+  O extends MiddlewareOutput,
+  D extends F.FuncDeclaration,
+  Type extends MiddlewareTypes,
+> extends F.FuncBuilder<I, O, D, Type> {
+  protected tags: string[];
+  protected summary: string;
+  protected description: string;
+  protected security: Record<string, SecurityScheme>;
+  constructor(
+    type: Type,
+    input: I,
+    output: O,
+    declaration: D,
+    wrappers: F.FuncWrapper<I, O, D, Type>[],
+    ref: { namespace: string; name: string },
+    tags: string[],
+    summary: string,
+    description: string,
+    security: Record<string, SecurityScheme>,
+  ) {
+    super(type, input, output, declaration, wrappers, ref);
+    this.tags = tags;
+    this.summary = summary;
+    this.description = description;
+    this.security = security;
+  }
+  $addTags(...tags: string[]): this {
+    this.tags.push(...tags);
+    return this;
+  }
+  $addSecurity(schemeName: string, scheme: SecurityScheme): this {
+    this.security[schemeName] = scheme;
+    return this;
+  }
+  $addSummary(summary: string): this {
+    this.summary = summary;
+    return this;
+  }
+  $addDescription(description: string): this {
+    this.description = description;
+    return this;
+  }
+
+  override $input(_: never): never {
+    throw new Error("Method not implemented.");
+  }
+  $reqHeaders<H extends z.ZodObject<any>>(headers: H): FuncMiddlewareBuilder<
+    z.ZodObject<Omit<I["shape"], "headers"> & { headers: H }>,
+    O,
+    D,
+    Type
+  > {
+    this.input = z.object({ ...this.input.shape, headers }) as never;
+    return this as never;
+  }
+  $reqQuery<Q extends z.ZodObject<any>>(query: Q): FuncMiddlewareBuilder<
+    z.ZodObject<Omit<I["shape"], "query"> & { query: Q }>,
+    O,
+    D,
+    Type
+  > {
+    this.input = z.object({ ...this.input.shape, query }) as never;
+    return this as never;
+  }
+  override $output(_: never): never {
+    throw new Error("Method not implemented.");
+  }
+  $resHeaders<H extends z.ZodObject<any>>(headers: H): FuncMiddlewareBuilder<
+    I,
+    z.ZodObject<Omit<O["shape"], "headers"> & { headers: H }>,
+    D,
+    Type
+  > {
+    this.output = z.object({ ...this.output.shape, headers }) as never;
+    return this as never;
+  }
+  $contextOpt<Opt extends z.ZodType>(opt: Opt): FuncMiddlewareBuilder<
+    I,
+    z.ZodObject<Omit<O["shape"], "opt"> & { opt: Opt }>,
+    D,
+    Type
+  > {
+    this.output = z.object({ ...this.output.shape, opt }) as never;
+    return this as never;
+  }
+  override $wrap(
+    wrap: F.FuncWrapper<I, O, D, Type>,
+  ): FuncMiddlewareBuilder<I, O, D, Type> {
+    return super.$wrap(wrap) as never;
+  }
+  override $declare<$D extends F.FuncDeclaration>(
+    dec: $D,
+  ): FuncMiddlewareBuilder<I, O, $D & D, Type> {
+    return super.$declare(dec) as never;
+  }
+  override $ref(
+    ref: { namespace: string; name: string },
+  ): FuncMiddlewareBuilder<I, O, D, Type> {
+    return super.$ref(ref) as never;
+  }
+  override $(
+    implementation: F.FuncImplementation<I, O, D, Type>,
+  ): FuncMiddlewareExported<I, O, D, Type> {
+    return new FuncMiddleware(
+      this.type,
+      this.input,
+      this.output,
+      this.declaration,
+      this.wrappers,
+      implementation,
+      this.ref,
+      this.tags,
+      this.summary,
+      this.description,
+      this.security,
+    ).create();
+  }
+}
+
+const emptyInput: z.ZodObject<{
+  headers: z.ZodOptional<z.ZodAny>;
+  query: z.ZodOptional<z.ZodAny>;
+}, z.core.$strip> = z.object({
+  headers: z.any().optional(),
+  query: z.any().optional(),
+});
+const emptyOutput: z.ZodObject<{
+  headers: z.ZodOptional<z.ZodAny>;
+  opt: z.ZodOptional<z.ZodAny>;
+}, z.core.$strip> = z.object({
+  headers: z.any().optional(),
+  opt: z.any().optional(),
+});
+
+/**
+ * Base Middleware Builder for synchronous functions
  * ```ts
- * const DecodedStateKey = FUNCTIONS.DefaultContextState.CreateKey<ReturnType<typeof decodeToken>>({ label: 'Decoded',scope: 'global' });
- * const authorize = ROUTES.Middleware.build({
- *   security: {
- *     JwtAuth: {
- *       type: "apiKey", // this rules will be used for documentation of routes
- *       description: "Authorize ** /users/login **.",
- *       name: "x-auth-token",
- *       in: "header",
- *     },
- *   },
- *   request: ROUTES.z.MiddlewareRequest({ // this schema will be used to address route request schema, in documentation
- *     headers: z.object({ "x-auth-token": z.string() }).passthrough(),
- *   }),
- *   response: ROUTES.z.MiddlewareResponse({}),
- *   async func({context, headers}) {
- *     const token =
- *       headers["x-auth-token"] ??
- *       headers["authorized"] ??
- *       headers["x-token"];
- *     const decoded = await decodeToken(token);
- *     if (!decoded) throw createHttpError.Unauthorized("Token not found / Token got Expired / Invalid Token!");
- *     context.useState(DecodedStateKey).set(decoded);
- *     return {};
- *   },
- * });
+ * const jwtDecodeMiddleware = syncFuncMiddleware()
+ *   .$addTags("Authorized-Routes")
+ *   .$addSecurity("Authorization", {
+ *     type: "apiKey",
+ *     description: "Authorize using **Bearer [web_access_token]**.",
+ *     name: "Authorization",
+ *     in: "header",
+ *   })
+ *   .$reqHeaders(z.object({ "x-auth": z.string().startsWith("Bearer ") }))
+ *   .$contextOpt(z.object({ uid: z.string(), email: z.string() }))
+ *   .$wrap(new F.SyncFuncParser({ output: false }))
+ *   .$((context, input) => {
+ *     const token = input.headers["x-auth"];
+ *     const decoded = jwt.decode(token, process.env.JWT_SECRET);
+ *     return { opt: decoded };
+ *   });
  * ```
  */
-export function build<
-  I extends zInput,
-  O extends zOutput,
-  S extends Record<never, never>,
-  C extends FUNCTIONS.Context,
-  W extends Wrappers<I, O, S, C>
->(params: Params<I, O, S, C, W>): Build<I, O, S, C, W> {
-  const extra: _Params<I, O> = {
-    endpoint: "middleware",
-    request: params.request,
-    response: params.response,
-    description: params.description,
-    security: params.security,
-    summary: params.summary,
-    tags: params.tags,
-  };
-  const _build = FUNCTIONS.AsyncFunction.build({
-    ...params,
-    input: params.request,
-    output: params.response,
-    func: ({ input, context }: { context: C; input: I["_output"] }) =>
-      params.func({ context, build, ...input }),
-  });
-  const build: Build<I, O, S, C, W> = Object.assign(
-    ({ context, ...input }: { context: FUNCTIONS.Context } & I["_input"]) =>
-      _build({ context, input }),
-    _build,
-    extra
+export function syncFuncMiddleware(): FuncMiddlewareBuilder<
+  typeof emptyInput,
+  typeof emptyOutput,
+  Record<never, never>,
+  F.FunctionTypes["SyncFunc"]
+> {
+  return new FuncMiddlewareBuilder(
+    F.FunctionTypes.SyncFunc,
+    emptyInput,
+    emptyOutput,
+    {},
+    [],
+    { namespace: "Unknown", name: "Unknown" },
+    [],
+    "",
+    "",
+    {},
   );
-  return build;
+}
+
+/**
+ * Base Middleware Builder for asynchronous functions
+ * ```ts
+ * const rateLimitMiddleware = asyncFuncMiddleware()
+ *   .$wrap(new F.AsyncFuncTime())
+ *   .$wrap(new F.AsyncFuncMemo())
+ *   .$(async (context, _) => {
+ *     const opt = jwtDecodeMiddleware.node.getOpt(context);
+ *     if (!opt) throw HttpError.Unauthorized("JWT not provided!");
+ *     const result = await redis.incr(`RateLimit:${opt.uid}`);
+ *     if (+result > 200) throw HttpError.Forbidden("Rate limit exceeded!");
+ *     if (result === 1) await redis.expire(`RateLimit:${opt.uid}`, 60);
+ *     return {};
+ *   });
+ * ```
+ */
+export function asyncFuncMiddleware(): FuncMiddlewareBuilder<
+  typeof emptyInput,
+  typeof emptyOutput,
+  Record<never, never>,
+  F.FunctionTypes["AsyncFunc"]
+> {
+  return new FuncMiddlewareBuilder(
+    F.FunctionTypes.AsyncFunc,
+    emptyInput,
+    emptyOutput,
+    {},
+    [],
+    { namespace: "Unknown", name: "Unknown" },
+    [],
+    "",
+    "",
+    {},
+  );
+}
+
+/**
+ * Base Middleware Builder for asynchronous functions
+ * ```ts
+ * const rateLimitMiddleware = asyncCbMiddleware()
+ *   .$wrap(new F.AsyncCbTime())
+ *   .$wrap(new F.AsyncCbMemo())
+ *   .$((context, _, callback) => {
+ *     const opt = jwtDecodeMiddleware.node.getOpt(context);
+ *     if (!opt) {
+ *       callback({ t: "Error", e: HttpError.Unauthorized("JWT not provided!") });
+ *       return;
+ *     }
+ *     redis.incr(`RateLimit:${opt.uid}`, (result, error) => {
+ *       if (error) {
+ *         callback({t: "Error", e: HttpError.Internal()});
+ *         return;
+ *       }
+ *       if (+result > 200) {
+ *         callback({t: "Error",e: HttpError.Forbidden("Rate limit exceeded!"),});
+ *         return;
+ *       }
+ *       if (result === 1) {
+ *         redis.expire(`RateLimit:${opt.uid}`, 60, () => {});
+ *       }
+ *       callback({ t: "Data", d: {} });
+ *     });
+ *   });
+ * ```
+ */
+export function asyncCbMiddleware(): FuncMiddlewareBuilder<
+  typeof emptyInput,
+  typeof emptyOutput,
+  Record<never, never>,
+  F.FunctionTypes["AsyncCb"]
+> {
+  return new FuncMiddlewareBuilder(
+    F.FunctionTypes.AsyncCb,
+    emptyInput,
+    emptyOutput,
+    {},
+    [],
+    { namespace: "Unknown", name: "Unknown" },
+    [],
+    "",
+    "",
+    {},
+  );
+}
+
+/**
+ * Base Middleware Builder for asynchronous functions
+ * ```ts
+ * const rateLimitMiddleware = asyncCbMiddleware()
+ *   .$wrap(new F.AsyncCbCancelableTime())
+ *   .$((context, _, callback) => {
+ *     const opt = jwtDecodeMiddleware.node.getOpt(context);
+ *     if (!opt) {
+ *       callback({ t: "Error", e: HttpError.Unauthorized("JWT not provided!") });
+ *       return;
+ *     }
+ *     function cancel() {
+ *       redis.cancel(job);
+ *     }
+ *     let job;
+ *     job = redis.incr(`RateLimit:${opt.uid}`, (result, error) => {
+ *       if (error) {
+ *         callback({t: "Error", e: HttpError.Internal()});
+ *         return;
+ *       }
+ *       if (+result > 200) {
+ *         callback({t: "Error",e: HttpError.Forbidden("Rate limit exceeded!"),});
+ *         return;
+ *       }
+ *       if (result === 1) {
+ *         job = redis.expire(`RateLimit:${opt.uid}`, 60, () => {});
+ *       }
+ *       callback({ t: "Data", d: {} });
+ *     });
+ *     return cancel;
+ *   });
+ *
+ * ```
+ */
+export function asyncCancelableCbMiddleware(): FuncMiddlewareBuilder<
+  typeof emptyInput,
+  typeof emptyOutput,
+  Record<never, never>,
+  F.FunctionTypes["AsyncCancelableCb"]
+> {
+  return new FuncMiddlewareBuilder(
+    F.FunctionTypes.AsyncCancelableCb,
+    emptyInput,
+    emptyOutput,
+    {},
+    [],
+    { namespace: "Unknown", name: "Unknown" },
+    [],
+    "",
+    "",
+    {},
+  );
 }

@@ -1,6 +1,28 @@
-import { Sse, Http, type Middleware } from "./endpoint/index.ts";
-import type { FUNCTIONS } from "@panth977/functions";
-
+import type { F } from "@panth977/functions";
+import type { HttpMethod, SecurityScheme } from "./zod-openapi.ts";
+import {
+  emptyHttpInput,
+  emptyHttpOutput,
+  emptySseInput,
+  emptySseOutput,
+  FuncHttpBuilder,
+  type FuncMiddlewareExported,
+  FuncSseBuilder,
+  type HttpTypes,
+  type MiddlewareInput,
+  type MiddlewareOutput,
+  type MiddlewareTypes,
+  type SseMethod,
+  type SseTypes,
+} from "./endpoint/index.ts";
+type Meta = {
+  tags?: string[];
+  summary?: string;
+  description?: string;
+  security?: Record<string, SecurityScheme>;
+  docsOrder?: number;
+  showIndocs?: boolean;
+};
 /**
  * A Pipeline to create your endpoints.
  *
@@ -21,173 +43,188 @@ import type { FUNCTIONS } from "@panth977/functions";
  * ...;
  * ```
  */
-export class Endpoint<Ms extends [] | [any, ...any[]]> {
-  middlewares: Ms;
-  tags: string[];
-  static build(): Endpoint<[]> {
-    return new Endpoint([], []);
+export class Endpoint {
+  protected middlewares: FuncMiddlewareExported<
+    MiddlewareInput,
+    MiddlewareOutput,
+    F.FuncDeclaration,
+    MiddlewareTypes
+  >[];
+  protected tags: string[];
+  protected namespace: string;
+  static build(): Endpoint {
+    return new Endpoint([], [], "Unknown");
   }
-  private constructor(middlewares: Ms, tags: string[]) {
+  private constructor(
+    middlewares: FuncMiddlewareExported<
+      MiddlewareInput,
+      MiddlewareOutput,
+      F.FuncDeclaration,
+      MiddlewareTypes
+    >[],
+    tags: string[],
+    namespace: string,
+  ) {
     this.middlewares = middlewares;
     this.tags = tags;
+    this.namespace = namespace;
   }
-  addMiddleware<
-    //
-    I extends Middleware.zInput,
-    O extends Middleware.zOutput,
-    S extends Record<never, never>,
-    C extends FUNCTIONS.Context,
-    W extends Middleware.Wrappers<I, O, S, C>
-  >(
-    middleware: Middleware.Build<I, O, S, C, W>
-  ): Endpoint<[...Ms, Middleware.Build<I, O, S, C, W>]> {
-    return new Endpoint([...this.middlewares, middleware as never], this.tags);
+  $middlewares<
+    I extends MiddlewareInput,
+    O extends MiddlewareOutput,
+    D extends F.FuncDeclaration,
+    Type extends MiddlewareTypes,
+  >(middleware: FuncMiddlewareExported<I, O, D, Type>): Endpoint {
+    return new Endpoint(
+      [...this.middlewares, middleware] as never,
+      this.tags,
+      this.namespace,
+    );
   }
-  addTags(...tags: string[]): Endpoint<Ms> {
-    return new Endpoint(this.middlewares, [...this.tags, ...tags]);
+  $addTags(...tags: string[]): Endpoint {
+    return new Endpoint(
+      this.middlewares,
+      [...this.tags, ...tags],
+      this.namespace,
+    );
   }
-  //
-  get<
-    //
-    I extends Http.zInput,
-    O extends Http.zOutput,
-    S extends Record<never, never>,
-    C extends FUNCTIONS.Context,
-    W extends Http.Wrappers<I, O, S, C>
-  >(
-    path: string,
-    params: Http.Params<Ms, I, O, S, C, W>
-  ): Http.Build<Ms, I, O, S, C, W> {
-    params.tags = (params.tags ??= []).concat(this.tags);
-    return Http.build(this.middlewares, "get", path, params);
-  }
-  post<
-    //
-    I extends Http.zInput,
-    O extends Http.zOutput,
-    S extends Record<never, never>,
-    C extends FUNCTIONS.Context,
-    W extends Http.Wrappers<I, O, S, C>
-  >(
-    path: string,
-    params: Http.Params<Ms, I, O, S, C, W>
-  ): Http.Build<Ms, I, O, S, C, W> {
-    params.tags = (params.tags ??= []).concat(this.tags);
-    return Http.build(this.middlewares, "post", path, params);
-  }
-  patch<
-    //
-    I extends Http.zInput,
-    O extends Http.zOutput,
-    S extends Record<never, never>,
-    C extends FUNCTIONS.Context,
-    W extends Http.Wrappers<I, O, S, C>
-  >(
-    path: string,
-    params: Http.Params<Ms, I, O, S, C, W>
-  ): Http.Build<Ms, I, O, S, C, W> {
-    params.tags = (params.tags ??= []).concat(this.tags);
-    return Http.build(this.middlewares, "patch", path, params);
-  }
-  put<
-    //
-    I extends Http.zInput,
-    O extends Http.zOutput,
-    S extends Record<never, never>,
-    C extends FUNCTIONS.Context,
-    W extends Http.Wrappers<I, O, S, C>
-  >(
-    path: string,
-    params: Http.Params<Ms, I, O, S, C, W>
-  ): Http.Build<Ms, I, O, S, C, W> {
-    params.tags = (params.tags ??= []).concat(this.tags);
-    return Http.build(this.middlewares, "put", path, params);
-  }
-  delete<
-    //
-    I extends Http.zInput,
-    O extends Http.zOutput,
-    S extends Record<never, never>,
-    C extends FUNCTIONS.Context,
-    W extends Http.Wrappers<I, O, S, C>
-  >(
-    path: string,
-    params: Http.Params<Ms, I, O, S, C, W>
-  ): Http.Build<Ms, I, O, S, C, W> {
-    params.tags = (params.tags ??= []).concat(this.tags);
-    return Http.build(this.middlewares, "delete", path, params);
-  }
-  trace<
-    //
-    I extends Http.zInput,
-    O extends Http.zOutput,
-    S extends Record<never, never>,
-    C extends FUNCTIONS.Context,
-    W extends Http.Wrappers<I, O, S, C>
-  >(
-    path: string,
-    params: Http.Params<Ms, I, O, S, C, W>
-  ): Http.Build<Ms, I, O, S, C, W> {
-    params.tags = (params.tags ??= []).concat(this.tags);
-    return Http.build(this.middlewares, "trace", path, params);
-  }
-  options<
-    //
-    I extends Http.zInput,
-    O extends Http.zOutput,
-    S extends Record<never, never>,
-    C extends FUNCTIONS.Context,
-    W extends Http.Wrappers<I, O, S, C>
-  >(
-    path: string,
-    params: Http.Params<Ms, I, O, S, C, W>
-  ): Http.Build<Ms, I, O, S, C, W> {
-    params.tags = (params.tags ??= []).concat(this.tags);
-    return Http.build(this.middlewares, "options", path, params);
-  }
-  sse<
-    //
-    I extends Sse.zInput,
-    Y extends Sse.zYield,
-    S extends Record<never, never>,
-    C extends FUNCTIONS.Context,
-    W extends Sse.Wrappers<I, Y, S, C>
-  >(
-    path: string,
-    params: Sse.Params<Ms, I, Y, S, C, W>
-  ): Sse.Build<Ms, I, Y, S, C, W> {
-    (params.tags ??= []).concat(this.tags);
-    return Sse.build(this.middlewares, "get", path, params);
+  $namespace(namespace: string): Endpoint {
+    return new Endpoint(this.middlewares, this.tags, namespace);
   }
   //
-  HTTP<
-    //
-    I extends Http.zInput,
-    O extends Http.zOutput,
-    S extends Record<never, never>,
-    C extends FUNCTIONS.Context,
-    W extends Http.Wrappers<I, O, S, C>
-  >(
-    method: Http.Method | Http.Method[],
-    path: string | string[],
-    params: Http.Params<Ms, I, O, S, C, W>
-  ): Http.Build<Ms, I, O, S, C, W> {
-    params.tags = (params.tags ??= []).concat(this.tags);
-    return Http.build(this.middlewares, method, path, params);
+  HTTP<Type extends HttpTypes>(
+    methods: HttpMethod | HttpMethod[],
+    paths: string | string[],
+    type: Type,
+    meta?: Meta,
+    name?: string,
+  ): FuncHttpBuilder<
+    typeof emptyHttpInput,
+    typeof emptyHttpOutput,
+    Record<never, never>,
+    Type
+  > {
+    return new FuncHttpBuilder(
+      [...this.middlewares],
+      Array.isArray(methods) ? methods : [methods],
+      Array.isArray(paths) ? paths : [paths],
+      type,
+      emptyHttpInput,
+      emptyHttpOutput,
+      {},
+      [],
+      { namespace: this.namespace, name: name ?? "Unknown" },
+      meta?.tags ?? [],
+      meta?.summary ?? "",
+      meta?.description ?? "",
+      meta?.security ?? {},
+      "",
+      "",
+      meta?.docsOrder ?? Number.MAX_SAFE_INTEGER,
+      meta?.showIndocs ?? true,
+    );
   }
-  SSE<
-    //
-    I extends Sse.zInput,
-    Y extends Sse.zYield,
-    S extends Record<never, never>,
-    C extends FUNCTIONS.Context,
-    W extends Sse.Wrappers<I, Y, S, C>
-  >(
-    method: Sse.Method | Sse.Method[],
-    path: string | string[],
-    params: Sse.Params<Ms, I, Y, S, C, W>
-  ): Sse.Build<Ms, I, Y, S, C, W> {
-    (params.tags ??= []).concat(this.tags);
-    return Sse.build(this.middlewares, method, path, params);
+  SSE<Type extends SseTypes>(
+    methods: SseMethod | SseMethod[],
+    paths: string | string[],
+    type: Type,
+    meta?: Meta,
+    name?: string,
+  ): FuncSseBuilder<
+    typeof emptySseInput,
+    typeof emptySseOutput,
+    Record<never, never>,
+    Type
+  > {
+    return new FuncSseBuilder(
+      [...this.middlewares],
+      Array.isArray(methods) ? methods : [methods],
+      Array.isArray(paths) ? paths : [paths],
+      type,
+      emptySseInput,
+      emptySseOutput,
+      {},
+      [],
+      { namespace: this.namespace, name: name ?? "Unknown" },
+      meta?.tags ?? [],
+      meta?.summary ?? "",
+      meta?.description ?? "",
+      meta?.security ?? {},
+      meta?.docsOrder ?? Number.MAX_SAFE_INTEGER,
+      meta?.showIndocs ?? true,
+    );
+  }
+  //
+  get<Type extends HttpTypes>(
+    path: string,
+    type: Type,
+    meta?: Meta,
+  ): FuncHttpBuilder<
+    typeof emptyHttpInput,
+    typeof emptyHttpOutput,
+    Record<never, never>,
+    Type
+  > {
+    return this.HTTP("get", path, type, meta, path);
+  }
+  post<Type extends HttpTypes>(
+    path: string,
+    type: Type,
+    meta?: Meta,
+  ): FuncHttpBuilder<
+    typeof emptyHttpInput,
+    typeof emptyHttpOutput,
+    Record<never, never>,
+    Type
+  > {
+    return this.HTTP("post", path, type, meta, path);
+  }
+  patch<Type extends HttpTypes>(
+    path: string,
+    type: Type,
+    meta?: Meta,
+  ): FuncHttpBuilder<
+    typeof emptyHttpInput,
+    typeof emptyHttpOutput,
+    Record<never, never>,
+    Type
+  > {
+    return this.HTTP("patch", path, type, meta, path);
+  }
+  put<Type extends HttpTypes>(
+    path: string,
+    type: Type,
+    meta?: Meta,
+  ): FuncHttpBuilder<
+    typeof emptyHttpInput,
+    typeof emptyHttpOutput,
+    Record<never, never>,
+    Type
+  > {
+    return this.HTTP("put", path, type, meta, path);
+  }
+  delete<Type extends HttpTypes>(
+    path: string,
+    type: Type,
+    meta?: Meta,
+  ): FuncHttpBuilder<
+    typeof emptyHttpInput,
+    typeof emptyHttpOutput,
+    Record<never, never>,
+    Type
+  > {
+    return this.HTTP("delete", path, type, meta, path);
+  }
+  sse<Type extends SseTypes>(
+    path: string,
+    type: Type,
+    meta?: Meta,
+  ): FuncSseBuilder<
+    typeof emptySseInput,
+    typeof emptySseOutput,
+    Record<never, never>,
+    Type
+  > {
+    return this.SSE("get", path, type, meta, path);
   }
 }

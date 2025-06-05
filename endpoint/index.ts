@@ -3,6 +3,6 @@
  * @module
  */
 
-export * as Middleware from "./middleware.ts";
-export * as Http from "./http.ts";
-export * as Sse from "./sse.ts";
+export * from "./middleware.ts";
+export * from "./http.ts";
+export * from "./sse.ts";
