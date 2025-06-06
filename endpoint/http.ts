@@ -364,6 +364,7 @@ export const emptyHttpOutput: z.ZodObject<{
 
 /**
  * Base Http Builder for synchronous functions
+ * @example
  * ```ts
  * const jwtDecodeHttp = syncFuncHttp()
  *   .$addTags("Authorized-Routes")
@@ -412,6 +413,7 @@ export function syncFuncHttp(method: HttpMethod, path: string): FuncHttpBuilder<
 
 /**
  * Base Http Builder for asynchronous functions
+ * @example
  * ```ts
  * const rateLimitHttp = asyncFuncHttp()
  *   .$wrap(new F.AsyncFuncTime())
@@ -458,6 +460,7 @@ export function asyncFuncHttp(
 
 /**
  * Base Http Builder for asynchronous functions
+ * @example
  * ```ts
  * const rateLimitHttp = asyncCbHttp()
  *   .$wrap(new F.AsyncCbTime())
@@ -514,6 +517,7 @@ export function asyncCbHttp(method: HttpMethod, path: string): FuncHttpBuilder<
 
 /**
  * Base Http Builder for asynchronous functions
+ * @example
  * ```ts
  * const rateLimitHttp = asyncCbHttp()
  *   .$wrap(new F.AsyncCbCancelableTime())

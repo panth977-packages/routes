@@ -38,4 +38,5 @@
  * ```
  */
 
-export * as R from "./exports.ts";
+import * as R from "./exports.ts";
+export { R };

@@ -294,6 +294,7 @@ export const emptySseOutput: z.ZodString = z.string();
 
 /**
  * Base Sse Builder for synchronous functions
+ * @example
  * ```ts
  * const jwtDecodeSse = syncFuncSse()
  *   .$addTags("Authorized-Routes")
@@ -340,6 +341,7 @@ export function subsCbSse(method: SseMethod, path: string): FuncSseBuilder<
 
 /**
  * Base Sse Builder for asynchronous functions
+ * @example
  * ```ts
  * const rateLimitSse = asyncFuncSse()
  *   .$wrap(new F.AsyncFuncTime())

@@ -237,6 +237,7 @@ const emptyOutput: z.ZodObject<{
 
 /**
  * Base Middleware Builder for synchronous functions
+ * @example
  * ```ts
  * const jwtDecodeMiddleware = syncFuncMiddleware()
  *   .$addTags("Authorized-Routes")
@@ -278,6 +279,7 @@ export function syncFuncMiddleware(): FuncMiddlewareBuilder<
 
 /**
  * Base Middleware Builder for asynchronous functions
+ * @example
  * ```ts
  * const rateLimitMiddleware = asyncFuncMiddleware()
  *   .$wrap(new F.AsyncFuncTime())
@@ -314,6 +316,7 @@ export function asyncFuncMiddleware(): FuncMiddlewareBuilder<
 
 /**
  * Base Middleware Builder for asynchronous functions
+ * @example
  * ```ts
  * const rateLimitMiddleware = asyncCbMiddleware()
  *   .$wrap(new F.AsyncCbTime())
@@ -363,6 +366,7 @@ export function asyncCbMiddleware(): FuncMiddlewareBuilder<
 
 /**
  * Base Middleware Builder for asynchronous functions
+ * @example
  * ```ts
  * const rateLimitMiddleware = asyncCbMiddleware()
  *   .$wrap(new F.AsyncCbCancelableTime())
