@@ -15,6 +15,7 @@ import type {
   SseOutput,
   SseTypes,
 } from "./endpoint/sse.ts";
+import type z from "zod/v4";
 
 /**
  * use this bundler to convert strongly typed Record<key, endpoint> to loosely.
@@ -141,6 +142,47 @@ export abstract class HttpContext extends F.Context<null> {
     return this.id;
   }
 }
+function onData<T>(
+  cb: (result: ["Error", unknown] | ["Data", T]) => void,
+): (data: T) => void {
+  return (data) => cb(["Data", data]);
+}
+function onError<T>(
+  cb: (result: ["Error", unknown] | ["Data", T]) => void,
+): (error: unknown) => void {
+  return (error) => cb(["Error", error]);
+}
+function executeFunc<
+  I extends F.FuncInput,
+  O extends F.FuncOutput,
+  D extends F.FuncDeclaration,
+  Type extends Extract<F.FuncTypes, "SyncFunc" | "AsyncFunc" | "AsyncCb">,
+  C extends F.Context,
+>(
+  func: F.FuncExported<I, O, D, Type>,
+  context: C,
+  input: z.infer<I>,
+  cb: (result: ["Error", unknown] | ["Data", z.infer<O>]) => void,
+): VoidFunction | null {
+  try {
+    if (func.node.type === "SyncFunc") {
+      const data = func(context, input) as F.FuncReturn<O, "SyncFunc">;
+      cb(["Data", data]);
+    } else if (func.node.type === "AsyncFunc") {
+      const pormise = func(context, input) as F.FuncReturn<O, "AsyncFunc">;
+      pormise.then(onData(cb)).catch(onError(cb));
+    } else if (func.node.type === "AsyncCb") {
+      const process = func(context, input) as F.FuncReturn<O, "AsyncCb">;
+      process.then(onData(cb)).catch(onError(cb));
+      return process.cancel.bind(process);
+    } else {
+      cb(["Error", new Error("Invalid function type")]);
+    }
+  } catch (err) {
+    cb(["Error", err]);
+  }
+  return null;
+}
 
 export class HttpExecutor<
   I extends HttpInput,
@@ -151,12 +193,15 @@ export class HttpExecutor<
 > {
   readonly context: C;
   readonly http: FuncHttpExported<I, O, D, Type>;
-  private status:
+  protected status:
     | "WaitingToStart"
     | "Running"
     | "ErrorExit"
     | "SuccessExit"
     | "CanceledExit" = "WaitingToStart";
+  getStatus(): typeof this.status {
+    return this.status;
+  }
   currentCancel: VoidFunction | null = null;
   constructor(context: C, http: FuncHttpExported<I, O, D, Type>) {
     this.context = context;
@@ -175,42 +220,42 @@ export class HttpExecutor<
     this.currentCancel = null;
   }
   protected handleMiddlewareInvoke(
-    r: F.InvokableResponse<{ headers: any; opt: any }>,
     idx: number,
+    result: ["Error", unknown] | ["Data", { headers: any; opt: any }],
   ) {
     if (this.status !== "Running") return;
     this.currentCancel = null;
-    if (r.t === "Error") {
-      this.context.endedWithError(r.e);
+    if (result[0] === "Error") {
+      this.context.endedWithError(result[1]);
       this.status = "ErrorExit";
       return;
     }
     FuncMiddleware.setOpt(
       this.context,
       this.http.node.middlewares[idx].node,
-      r.d.opt,
+      result[1].opt,
     );
-    this.context.setResHeaders(r.d.headers);
+    this.context.setResHeaders(result[1].headers);
     this.invokeBuildIndex(idx + 1);
   }
   protected handleHttpInvoke(
-    r: F.InvokableResponse<{ headers: any; body: any }>,
+    result: ["Error", unknown] | ["Data", { headers: any; body: any }],
   ) {
     if (this.status !== "Running") return;
     this.currentCancel = null;
-    if (r.t === "Error") {
-      this.context.endedWithError(r.e);
+    if (result[0] === "Error") {
+      this.context.endedWithError(result[1]);
       this.status = "ErrorExit";
       return;
     }
-    this.context.setResHeaders(r.d.headers);
+    this.context.setResHeaders(result[1].headers);
     if (
       !this.http.node.resMediaTypes ||
       this.http.node.resMediaTypes === "application/json"
     ) {
-      this.context.setBodyJson(r.d.body);
+      this.context.setBodyJson(result[1].body);
     } else {
-      this.context.setBody(this.http.node.resMediaTypes, r.d.body);
+      this.context.setBody(this.http.node.resMediaTypes, result[1].body);
     }
     this.context.endedWithSuccess();
     this.status = "SuccessExit";
@@ -220,20 +265,19 @@ export class HttpExecutor<
     if (this.status !== "Running") return;
     this.currentCancel = null;
     if (idx < this.http.node.middlewares.length) {
-      this.currentCancel = F.toInvokable(
-        this.http.node.middlewares[idx] as never,
-        this.context.req,
-      ).asCb(
+      this.currentCancel = executeFunc(
+        this.http.node.middlewares[idx],
         this.context,
-        this.handleMiddlewareInvoke.bind(this) as never,
-        idx,
+        this.context.req,
+        this.handleMiddlewareInvoke.bind(this, idx),
       );
     } else {
-      this.currentCancel = F.toInvokable(this.http as never, this.context.req)
-        .asCb(
-          this.context,
-          this.handleHttpInvoke.bind(this) as never,
-        );
+      this.currentCancel = executeFunc(
+        this.http,
+        this.context,
+        this.context.req as any,
+        this.handleHttpInvoke.bind(this),
+      );
     }
   }
 }
@@ -290,62 +334,63 @@ export class SseExecutor<
     this.currentCancel = null;
   }
   protected handleMiddlewareInvoke(
-    r: F.InvokableResponse<{ headers: any; opt: any }>,
     idx: number,
+    result: ["Error", unknown] | ["Data", { headers: any; opt: any }],
   ) {
     if (this.status !== "Running") return;
     this.currentCancel = null;
-    if (r.t === "Error") {
-      this.context.endedWithError(r.e);
+    if (result[0] === "Error") {
+      this.context.endedWithError(result[1]);
       this.status = "ErrorExit";
       return;
     }
     FuncMiddleware.setOpt(
       this.context,
       this.sse.node.middlewares[idx].node,
-      r.d.opt,
+      result[1].opt,
     );
     this.invokeBuildIndex(idx + 1);
   }
-  protected handleSseInvoke(
-    r:
-      | { t: "Error"; e: unknown }
-      | { t: "Data"; d: string }
-      | { t: "End" },
-  ) {
-    if (this.status !== "Running") return;
+  protected onEnd() {
     this.currentCancel = null;
-    if (r.t === "Error") {
-      this.context.endedWithError(r.e);
+    this.context.endedWithSuccess();
+    this.status = "SuccessExit";
+  }
+  protected onError(error: unknown) {
+    this.currentCancel = null;
+    this.context.endedWithError(error);
+    this.status = "ErrorExit";
+  }
+  protected onData(data: z.infer<O>) {
+    let output;
+    try {
+      output = this.sse.node.encoder(data);
+    } catch (error) {
+      this.currentCancel?.();
+      this.currentCancel = null;
+      this.context.endedWithError(error);
       this.status = "ErrorExit";
       return;
     }
-    if (r.t === "End") {
-      this.context.endedWithSuccess();
-      this.status = "SuccessExit";
-      return;
-    }
-    this.context.send(r.d);
-    return;
+    this.context.send(output);
   }
   protected invokeBuildIndex(idx: number) {
     if (this.status !== "Running") return;
     this.currentCancel = null;
     if (idx < this.sse.node.middlewares.length) {
-      this.currentCancel = F.toInvokable(
-        this.sse.node.middlewares[idx] as never,
-        this.context.req,
-      ).asCb(
-        this.context,
-        this.handleMiddlewareInvoke.bind(this) as never,
-        idx,
-      );
-    } else {
-      this.currentCancel = this.sse(
+      this.currentCancel = executeFunc(
+        this.sse.node.middlewares[idx],
         this.context,
         this.context.req as any,
-        this.handleSseInvoke.bind(this),
-      ) ?? null;
+        this.handleMiddlewareInvoke.bind(this, idx),
+      );
+    } else {
+      const process = this.sse(this.context, this.context.req as any);
+      this.currentCancel = process.cancel.bind(process);
+      process.onEnd(this.onEnd.bind(this));
+      process.catch(this.onError.bind(this));
+      process.listen(this.onData.bind(this));
+      process.startFlush();
     }
   }
 }

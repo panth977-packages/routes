@@ -15,6 +15,7 @@ import {
   type SseMethod,
   type SseTypes,
 } from "./endpoint/index.ts";
+import { defaultEncoder } from "./endpoint/sse.ts";
 type Meta = {
   tags?: string[];
   summary?: string;
@@ -146,6 +147,7 @@ export class Endpoint {
       {},
       [],
       { namespace: this.namespace, name: name ?? "Unknown" },
+      defaultEncoder,
       meta?.tags ?? [],
       meta?.summary ?? "",
       meta?.description ?? "",

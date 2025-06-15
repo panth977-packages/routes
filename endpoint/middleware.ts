@@ -10,11 +10,10 @@ export type MiddlewareOutput = z.ZodObject<{
   headers: z.ZodOptional<z.ZodAny> | z.ZodObject<any>;
   opt: z.ZodType;
 }>;
-export type MiddlewareTypes =
-  | F.FunctionTypes["SyncFunc"]
-  | F.FunctionTypes["AsyncFunc"]
-  | F.FunctionTypes["AsyncCb"]
-  | F.FunctionTypes["AsyncCancelableCb"];
+export type MiddlewareTypes = Extract<
+  F.FuncTypes,
+  "SyncFunc" | "AsyncFunc" | "AsyncCb"
+>;
 export type FuncMiddlewareExported<
   I extends MiddlewareInput,
   O extends MiddlewareOutput,
@@ -22,7 +21,11 @@ export type FuncMiddlewareExported<
   Type extends MiddlewareTypes,
 > =
   & F.FuncExposed<I, O, Type>
-  & { node: FuncMiddleware<I, O, D, Type> };
+  & {
+    node: FuncMiddleware<I, O, D, Type>;
+    output: z.infer<O>;
+    input: z.infer<I>;
+  };
 /**
  * Base Middleware Node [Is one of node used in Context.node]
  */
@@ -32,10 +35,6 @@ export class FuncMiddleware<
   D extends F.FuncDeclaration,
   Type extends MiddlewareTypes,
 > extends F.Func<I, O, D, Type> {
-  readonly tags: string[];
-  readonly summary: string;
-  readonly description: string;
-  readonly security: Record<string, SecurityScheme>;
   protected state: F.ContextState<z.infer<O["shape"]["opt"]>>;
   constructor(
     type: Type,
@@ -45,16 +44,12 @@ export class FuncMiddleware<
     wrappers: F.FuncWrapper<I, O, D, Type>[],
     implementation: F.FuncImplementation<I, O, D, Type>,
     ref: { namespace: string; name: string },
-    tags: string[],
-    summary: string,
-    description: string,
-    security: Record<string, SecurityScheme>,
+    readonly tags: string[],
+    readonly summary: string,
+    readonly description: string,
+    readonly security: Record<string, SecurityScheme>,
   ) {
     super(type, input, output, declaration, wrappers, implementation, ref);
-    this.tags = tags;
-    this.summary = summary;
-    this.description = description;
-    this.security = security;
     this.state = F.ContextState.Cascade("Middleware", "create&read");
   }
 
@@ -70,8 +65,8 @@ export class FuncMiddleware<
     context: F.Context,
     middleware: FuncMiddleware<I, O, D, Type>,
     opt: z.infer<O["shape"]["opt"]>,
-  ) {
-    return middleware.state.set(context, opt);
+  ): void {
+    middleware.state.set(context, opt);
   }
   addTags(...tags: string[]) {
     this.tags.push(...tags);
@@ -105,10 +100,6 @@ export class FuncMiddlewareBuilder<
   D extends F.FuncDeclaration,
   Type extends MiddlewareTypes,
 > extends F.FuncBuilder<I, O, D, Type> {
-  protected tags: string[];
-  protected summary: string;
-  protected description: string;
-  protected security: Record<string, SecurityScheme>;
   constructor(
     type: Type,
     input: I,
@@ -116,16 +107,12 @@ export class FuncMiddlewareBuilder<
     declaration: D,
     wrappers: F.FuncWrapper<I, O, D, Type>[],
     ref: { namespace: string; name: string },
-    tags: string[],
-    summary: string,
-    description: string,
-    security: Record<string, SecurityScheme>,
+    protected tags: string[],
+    protected summary: string,
+    protected description: string,
+    protected security: Record<string, SecurityScheme>,
   ) {
     super(type, input, output, declaration, wrappers, ref);
-    this.tags = tags;
-    this.summary = summary;
-    this.description = description;
-    this.security = security;
   }
   $addTags(...tags: string[]): this {
     this.tags.push(...tags);
@@ -261,10 +248,10 @@ export function syncFuncMiddleware(): FuncMiddlewareBuilder<
   typeof emptyInput,
   typeof emptyOutput,
   Record<never, never>,
-  F.FunctionTypes["SyncFunc"]
+  "SyncFunc"
 > {
   return new FuncMiddlewareBuilder(
-    F.FunctionTypes.SyncFunc,
+    "SyncFunc",
     emptyInput,
     emptyOutput,
     {},
@@ -298,10 +285,10 @@ export function asyncFuncMiddleware(): FuncMiddlewareBuilder<
   typeof emptyInput,
   typeof emptyOutput,
   Record<never, never>,
-  F.FunctionTypes["AsyncFunc"]
+  "AsyncFunc"
 > {
   return new FuncMiddlewareBuilder(
-    F.FunctionTypes.AsyncFunc,
+    "AsyncFunc",
     emptyInput,
     emptyOutput,
     {},
@@ -318,29 +305,31 @@ export function asyncFuncMiddleware(): FuncMiddlewareBuilder<
  * Base Middleware Builder for asynchronous functions
  * @example
  * ```ts
- * const rateLimitMiddleware = asyncCbMiddleware()
- *   .$wrap(new F.AsyncCbTime())
- *   .$wrap(new F.AsyncCbMemo())
- *   .$((context, _, callback) => {
- *     const opt = jwtDecodeMiddleware.node.getOpt(context);
+ * const rateLimitHttp = asyncCbMiddleware()
+ *   .$wrap(new F.WFTimer())
+ *   .$((context, _) => {
+ *     const port = context.node.createPort();
+ *     const opt = jwtDecodeHttp.node.getOpt(context);
  *     if (!opt) {
- *       callback({ t: "Error", e: HttpError.Unauthorized("JWT not provided!") });
+ *       port.throw(HttpError.Unauthorized("JWT not provided!"));
  *       return;
  *     }
- *     redis.incr(`RateLimit:${opt.uid}`, (result, error) => {
+ *     const job = redis.incr(`RateLimit:${opt.uid}`, (result, error) => {
  *       if (error) {
- *         callback({t: "Error", e: HttpError.Internal()});
+ *         port.throw(HttpError.Internal());
  *         return;
  *       }
  *       if (+result > 200) {
- *         callback({t: "Error",e: HttpError.Forbidden("Rate limit exceeded!"),});
+ *         port.throw(HttpError.Forbidden("Rate limit exceeded!"));
  *         return;
  *       }
  *       if (result === 1) {
  *         redis.expire(`RateLimit:${opt.uid}`, 60, () => {});
  *       }
- *       callback({ t: "Data", d: {} });
+ *       port.return({});
  *     });
+ *     port.onCancel = redis.cancel.bind(redis, job);
+ *     return port.getHandler();
  *   });
  * ```
  */
@@ -348,65 +337,10 @@ export function asyncCbMiddleware(): FuncMiddlewareBuilder<
   typeof emptyInput,
   typeof emptyOutput,
   Record<never, never>,
-  F.FunctionTypes["AsyncCb"]
+  "AsyncCb"
 > {
   return new FuncMiddlewareBuilder(
-    F.FunctionTypes.AsyncCb,
-    emptyInput,
-    emptyOutput,
-    {},
-    [],
-    { namespace: "Unknown", name: "Unknown" },
-    [],
-    "",
-    "",
-    {},
-  );
-}
-
-/**
- * Base Middleware Builder for asynchronous functions
- * @example
- * ```ts
- * const rateLimitMiddleware = asyncCbMiddleware()
- *   .$wrap(new F.AsyncCbCancelableTime())
- *   .$((context, _, callback) => {
- *     const opt = jwtDecodeMiddleware.node.getOpt(context);
- *     if (!opt) {
- *       callback({ t: "Error", e: HttpError.Unauthorized("JWT not provided!") });
- *       return;
- *     }
- *     function cancel() {
- *       redis.cancel(job);
- *     }
- *     let job;
- *     job = redis.incr(`RateLimit:${opt.uid}`, (result, error) => {
- *       if (error) {
- *         callback({t: "Error", e: HttpError.Internal()});
- *         return;
- *       }
- *       if (+result > 200) {
- *         callback({t: "Error",e: HttpError.Forbidden("Rate limit exceeded!"),});
- *         return;
- *       }
- *       if (result === 1) {
- *         job = redis.expire(`RateLimit:${opt.uid}`, 60, () => {});
- *       }
- *       callback({ t: "Data", d: {} });
- *     });
- *     return cancel;
- *   });
- *
- * ```
- */
-export function asyncCancelableCbMiddleware(): FuncMiddlewareBuilder<
-  typeof emptyInput,
-  typeof emptyOutput,
-  Record<never, never>,
-  F.FunctionTypes["AsyncCancelableCb"]
-> {
-  return new FuncMiddlewareBuilder(
-    F.FunctionTypes.AsyncCancelableCb,
+    "AsyncCb",
     emptyInput,
     emptyOutput,
     {},
