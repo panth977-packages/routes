@@ -1,26 +1,27 @@
 {
   "version": "4",
   "specifiers": {
-    "jsr:@panth977/functions@^1.0.13": "1.0.13",
-    "npm:zod@^3.25.0": "3.25.48"
+    "jsr:@panth977/functions@^1.0.14": "1.0.14",
+    "npm:zod@^3.25.0": "3.25.67",
+    "npm:zod@^3.25.67": "3.25.67"
   },
   "jsr": {
-    "@panth977/functions@1.0.13": {
-      "integrity": "3717c58f659705eb2b16765131aa4610f235ac4e74a1fdc2da0330217d46901d",
+    "@panth977/functions@1.0.14": {
+      "integrity": "a094525fb4a759d3127c04d0eba4e15aa83e158caac2094040cbd09accb2e59c",
       "dependencies": [
-        "npm:zod"
+        "npm:zod@^3.25.67"
       ]
     }
   },
   "npm": {
-    "zod@3.25.48": {
-      "integrity": "sha512-0X1mz8FtgEIvaxGjdIImYpZEaZMrund9pGXm3M6vM7Reba0e2eI71KPjSCGXBfwKDPwPoywf6waUKc3/tFvX2Q=="
+    "zod@3.25.67": {
+      "integrity": "sha512-idA2YXwpCdqUSKRCACDE6ItZD9TZzy3OZMtpfLoh6oPR47lipysRrJfjzMqFxQ3uJuUPyUeWe1r9vLH33xO/Qw=="
     }
   },
   "workspace": {
     "dependencies": [
-      "jsr:@panth977/functions@^1.0.13",
-      "npm:zod@^3.25.0"
+      "jsr:@panth977/functions@^1.0.14",
+      "npm:zod@^3.25.67"
     ]
   }
 }
