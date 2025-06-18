@@ -158,9 +158,8 @@ export class FuncSseBuilder<
     this.description = description;
     return this;
   }
-  override $input(_: never): never {
-    throw new Error("Method not implemented.");
-  }
+  override $input = null as never;
+  override $output = null as never;
   $reqPath<P extends z.ZodObject<any>>(path: P): FuncSseBuilder<
     z.ZodObject<Omit<I["shape"], "path"> & { path: P }>,
     O,
@@ -178,9 +177,6 @@ export class FuncSseBuilder<
   > {
     this.input = z.object({ ...this.input.shape, query }) as never;
     return this as never;
-  }
-  override $output(_: never): never {
-    throw new Error("Method not implemented.");
   }
   $resEvent<E extends z.ZodType>(event: E): FuncSseBuilder<
     I,

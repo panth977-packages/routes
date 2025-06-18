@@ -130,10 +130,8 @@ export class FuncMiddlewareBuilder<
     this.description = description;
     return this;
   }
-
-  override $input(_: never): never {
-    throw new Error("Method not implemented.");
-  }
+  override $input = null as never;
+  override $output = null as never;
   $reqHeaders<H extends z.ZodObject<any>>(headers: H): FuncMiddlewareBuilder<
     z.ZodObject<Omit<I["shape"], "headers"> & { headers: H }>,
     O,
@@ -151,9 +149,6 @@ export class FuncMiddlewareBuilder<
   > {
     this.input = z.object({ ...this.input.shape, query }) as never;
     return this as never;
-  }
-  override $output(_: never): never {
-    throw new Error("Method not implemented.");
   }
   $resHeaders<H extends z.ZodObject<any>>(headers: H): FuncMiddlewareBuilder<
     I,

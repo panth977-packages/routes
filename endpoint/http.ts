@@ -176,10 +176,8 @@ export class FuncHttpBuilder<
     this.description = description;
     return this;
   }
-
-  override $input(_: never): never {
-    throw new Error("Method not implemented.");
-  }
+  override $input = null as never;
+  override $output = null as never;
   $reqPath<P extends z.ZodObject<any>>(path: P): FuncHttpBuilder<
     z.ZodObject<Omit<I["shape"], "path"> & { path: P }>,
     O,
@@ -219,9 +217,6 @@ export class FuncHttpBuilder<
   $reqMediaType(mt: string): FuncHttpBuilder<I, O, D, Type> {
     this.reqMediaTypes = mt;
     return this as never;
-  }
-  override $output(_: never): never {
-    throw new Error("Method not implemented.");
   }
   $resHeaders<H extends z.ZodObject<any>>(headers: H): FuncHttpBuilder<
     I,
