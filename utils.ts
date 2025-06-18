@@ -129,10 +129,11 @@ export abstract class HttpContext extends F.Context<null> {
     body: any;
   };
   abstract setResHeaders(headers: Record<string, string | string[]>): void;
-  abstract setBodyJson(json: any): void;
-  abstract setBody(resContentType: string, content: unknown): void;
+  abstract endWithData(
+    contentType: "application/json" | (string & Record<never, never>),
+    content: unknown,
+  ): void;
   abstract endedWithError(err: unknown): void;
-  abstract endedWithSuccess(): void;
 
   constructor(requestId: string, path: string) {
     super(requestId, path, null);
@@ -253,11 +254,10 @@ export class HttpExecutor<
       !this.http.node.resMediaTypes ||
       this.http.node.resMediaTypes === "application/json"
     ) {
-      this.context.setBodyJson(result[1].body);
+      this.context.endWithData("application/json", result[1].body);
     } else {
-      this.context.setBody(this.http.node.resMediaTypes, result[1].body);
+      this.context.endWithData(this.http.node.resMediaTypes, result[1].body);
     }
-    this.context.endedWithSuccess();
     this.status = "SuccessExit";
     return;
   }
