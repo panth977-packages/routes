@@ -12,7 +12,7 @@ export type MiddlewareOutput = z.ZodObject<{
 }>;
 export type MiddlewareTypes = Extract<
   F.FuncTypes,
-  "SyncFunc" | "AsyncFunc" | "AsyncCb"
+  "SyncFunc" | "AsyncFunc"
 >;
 export type FuncMiddlewareExported<
   I extends MiddlewareInput,
@@ -90,6 +90,10 @@ export class FuncMiddleware<
     return this.output.shape.opt;
   }
 }
+export type MiddlewareBuildTypes = Exclude<
+  F.BuilderType,
+  "StreamFunc"
+>;
 
 /**
  * Base Middleware Builder, Use this to build a Func Node
@@ -98,14 +102,14 @@ export class FuncMiddlewareBuilder<
   I extends MiddlewareInput,
   O extends MiddlewareOutput,
   D extends F.FuncDeclaration,
-  Type extends MiddlewareTypes,
+  Type extends MiddlewareBuildTypes,
 > extends F.FuncBuilder<I, O, D, Type> {
   constructor(
     type: Type,
     input: I,
     output: O,
     declaration: D,
-    wrappers: F.FuncWrapper<I, O, D, Type>[],
+    wrappers: F.FuncWrapper<I, O, D, F.BuilderToFuncType<Type>>[],
     ref: { namespace: string; name: string },
     protected tags: string[],
     protected summary: string,
@@ -169,7 +173,7 @@ export class FuncMiddlewareBuilder<
     return this as never;
   }
   override $wrap(
-    wrap: F.FuncWrapper<I, O, D, Type>,
+    wrap: F.FuncWrapper<I, O, D, F.BuilderToFuncType<Type>>,
   ): FuncMiddlewareBuilder<I, O, D, Type> {
     return super.$wrap(wrap) as never;
   }
@@ -184,15 +188,16 @@ export class FuncMiddlewareBuilder<
     return super.$ref(ref) as never;
   }
   override $(
-    implementation: F.FuncImplementation<I, O, D, Type>,
-  ): FuncMiddlewareExported<I, O, D, Type> {
+    implementation: F.BuilderImplementation<I, O, D, Type>,
+  ): FuncMiddlewareExported<I, O, D, F.BuilderToFuncType<Type>> {
+    const [type, funcImp] = this.toFuncTypes(implementation);
     return new FuncMiddleware(
-      this.type,
+      type,
       this.input,
       this.output,
       this.declaration,
       this.wrappers,
-      implementation,
+      funcImp,
       this.ref,
       this.tags,
       this.summary,
@@ -263,7 +268,7 @@ export function syncFuncMiddleware(): FuncMiddlewareBuilder<
  * Base Middleware Builder for asynchronous functions
  * @example
  * ```ts
- * const rateLimitMiddleware = asyncFuncMiddleware()
+ * const rateLimitMiddleware = asyncLikeMiddleware()
  *   .$wrap(new F.AsyncFuncTime())
  *   .$wrap(new F.AsyncFuncMemo())
  *   .$(async (context, _) => {
@@ -276,14 +281,14 @@ export function syncFuncMiddleware(): FuncMiddlewareBuilder<
  *   });
  * ```
  */
-export function asyncFuncMiddleware(): FuncMiddlewareBuilder<
+export function asyncLikeMiddleware(): FuncMiddlewareBuilder<
   typeof emptyInput,
   typeof emptyOutput,
   Record<never, never>,
-  "AsyncFunc"
+  "AsyncLike"
 > {
   return new FuncMiddlewareBuilder(
-    "AsyncFunc",
+    "AsyncLike",
     emptyInput,
     emptyOutput,
     {},
@@ -300,10 +305,10 @@ export function asyncFuncMiddleware(): FuncMiddlewareBuilder<
  * Base Middleware Builder for asynchronous functions
  * @example
  * ```ts
- * const rateLimitHttp = asyncCbMiddleware()
+ * const rateLimitHttp = asyncFuncMiddleware()
  *   .$wrap(new F.WFTimer())
  *   .$((context, _) => {
- *     const port = context.node.createPort();
+ *     const [port, promise] = context.node.createPort();
  *     const opt = jwtDecodeHttp.node.getOpt(context);
  *     if (!opt) {
  *       port.throw(HttpError.Unauthorized("JWT not provided!"));
@@ -323,19 +328,19 @@ export function asyncFuncMiddleware(): FuncMiddlewareBuilder<
  *       }
  *       port.return({});
  *     });
- *     port.onCancel = redis.cancel.bind(redis, job);
- *     return port.getHandler();
+ *     port.oncancel(redis.cancel.bind(redis, job));
+ *     return promise;
  *   });
  * ```
  */
-export function asyncCbMiddleware(): FuncMiddlewareBuilder<
+export function asyncFuncMiddleware(): FuncMiddlewareBuilder<
   typeof emptyInput,
   typeof emptyOutput,
   Record<never, never>,
-  "AsyncCb"
+  "AsyncFunc"
 > {
   return new FuncMiddlewareBuilder(
-    "AsyncCb",
+    "AsyncFunc",
     emptyInput,
     emptyOutput,
     {},

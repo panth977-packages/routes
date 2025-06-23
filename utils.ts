@@ -145,19 +145,21 @@ export abstract class HttpContext extends F.Context<null> {
 }
 function onData<T>(
   cb: (result: ["Error", unknown] | ["Data", T]) => void,
-): (data: T) => void {
-  return (data) => cb(["Data", data]);
+  data: T,
+): void {
+  cb(["Data", data]);
 }
 function onError<T>(
   cb: (result: ["Error", unknown] | ["Data", T]) => void,
-): (error: unknown) => void {
-  return (error) => cb(["Error", error]);
+  error: unknown,
+): void {
+  cb(["Error", error]);
 }
 function executeFunc<
   I extends F.FuncInput,
   O extends F.FuncOutput,
   D extends F.FuncDeclaration,
-  Type extends Extract<F.FuncTypes, "SyncFunc" | "AsyncFunc" | "AsyncCb">,
+  Type extends Extract<F.FuncTypes, "SyncFunc" | "AsyncFunc">,
   C extends F.Context,
 >(
   func: F.FuncExported<I, O, D, Type>,
@@ -168,19 +170,17 @@ function executeFunc<
   try {
     if (func.node.type === "SyncFunc") {
       const data = func(context, input) as F.FuncReturn<O, "SyncFunc">;
-      cb(["Data", data]);
+      onData(cb, data);
     } else if (func.node.type === "AsyncFunc") {
-      const pormise = func(context, input) as F.FuncReturn<O, "AsyncFunc">;
-      pormise.then(onData(cb)).catch(onError(cb));
-    } else if (func.node.type === "AsyncCb") {
-      const process = func(context, input) as F.FuncReturn<O, "AsyncCb">;
-      process.then(onData(cb)).catch(onError(cb));
-      return process.cancel.bind(process);
+      const promise = func(context, input) as F.FuncReturn<O, "AsyncFunc">;
+      promise
+        .ondata((onData<z.infer<O>>).bind(null, cb))
+        .onerror((onError<z.infer<O>>).bind(null, cb));
     } else {
-      cb(["Error", new Error("Invalid function type")]);
+      onError(cb, new Error("Invalid function type"));
     }
   } catch (err) {
-    cb(["Error", err]);
+    onError(cb, err);
   }
   return null;
 }
@@ -361,7 +361,7 @@ export class SseExecutor<
     this.context.endedWithError(error);
     this.status = "ErrorExit";
   }
-  protected onData(data: z.infer<O>) {
+  protected onData(data: z.infer<O>, _i: number) {
     let output;
     try {
       output = this.sse.node.encoder(data);
@@ -387,10 +387,9 @@ export class SseExecutor<
     } else {
       const process = this.sse(this.context, this.context.req as any);
       this.currentCancel = process.cancel.bind(process);
-      process.onEnd(this.onEnd.bind(this));
-      process.catch(this.onError.bind(this));
+      process.onfinish(this.onEnd.bind(this));
+      process.onerror(this.onError.bind(this));
       process.listen(this.onData.bind(this));
-      process.startFlush();
     }
   }
 }

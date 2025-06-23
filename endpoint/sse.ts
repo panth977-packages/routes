@@ -14,7 +14,7 @@ export type SseInput = z.ZodObject<{
   query: z.ZodOptional<z.ZodAny> | z.ZodObject<any>;
 }>;
 export type SseOutput = z.ZodType;
-export type SseTypes = Extract<F.FuncTypes, "SubsCb">;
+export type SseTypes = Extract<F.FuncTypes, "StreamFunc">;
 export type FuncSseExported<
   I extends SseInput,
   O extends SseOutput,
@@ -82,6 +82,10 @@ export class FuncSse<
     return this.output;
   }
 }
+export type SseBuildTypes = Extract<
+  F.BuilderType,
+  "StreamFunc"
+>;
 
 /**
  * Base Sse Builder, Use this to build a Func Node
@@ -90,7 +94,7 @@ export class FuncSseBuilder<
   I extends SseInput,
   O extends SseOutput,
   D extends F.FuncDeclaration,
-  Type extends SseTypes,
+  Type extends SseBuildTypes,
 > extends F.FuncBuilder<I, O, D, Type> {
   constructor(
     protected middlewares: FuncMiddlewareExported<
@@ -105,7 +109,7 @@ export class FuncSseBuilder<
     input: I,
     output: O,
     declaration: D,
-    wrappers: F.FuncWrapper<I, O, D, Type>[],
+    wrappers: F.FuncWrapper<I, O, D, F.BuilderToFuncType<Type>>[],
     ref: { namespace: string; name: string },
     protected encoder: (data: z.infer<O>) => string,
     protected tags: string[],
@@ -197,7 +201,7 @@ export class FuncSseBuilder<
     return this;
   }
   override $wrap(
-    wrap: F.FuncWrapper<I, O, D, Type>,
+    wrap: F.FuncWrapper<I, O, D, F.BuilderToFuncType<Type>>,
   ): FuncSseBuilder<I, O, D, Type> {
     return super.$wrap(wrap) as never;
   }
@@ -212,24 +216,25 @@ export class FuncSseBuilder<
     return super.$ref(ref) as never;
   }
   override $(
-    implementation: F.FuncImplementation<I, O, D, Type>,
-  ): FuncSseExported<I, O, D, Type> {
+    implementation: F.BuilderImplementation<I, O, D, Type>,
+  ): FuncSseExported<I, O, D, F.BuilderToFuncType<Type>> {
     if (this.methods.length === 0) {
       throw new Error("No methods specified");
     }
     if (this.paths.length === 0) {
       throw new Error("No paths specified");
     }
+    const [type, funcImp] = this.toFuncTypes(implementation);
     return new FuncSse(
       this.middlewares,
       this.methods,
       this.paths,
-      this.type,
+      type,
       this.input,
       this.output,
       this.declaration,
       this.wrappers,
-      implementation,
+      funcImp,
       this.ref,
       this.encoder,
       this.tags,
@@ -262,46 +267,42 @@ export function defaultEncoder<OT>(data: OT): string {
  * Base Sse Builder for synchronous functions
  * @example
  * ```ts
- * const jwtDecodeSse = subsCbSse("get", "/realtime")
+ * const jwtDecodeSse = streamFuncSse("get", "/realtime")
  *   .$resEvent(
  *     z.object({ deviceId: z.string(), data: z.record(z.string(), z.number()) }),
  *   )
  *   .$encoder((data) =>
  *     [data.deviceId, ...Object.entries(data.data).flat()].join(",")
  *   )
- *   .$declare({
- *     onMsg(port: F.SubsCbSender<any>, _: string, message: Buffer) {
- *       port.yield(JSON.parse(message.toString()));
- *     },
- *     onError(client: MqttClient, port: F.SubsCbSender<any>, error: Error) {
- *       port.throw(error);
- *       client.end();
- *     }
- *   })
  *   .$wrap(new F.WFParser())
  *   .$((context, input) => {
- *     const port = context.node.createPort();
+ *     const [port, stream] = context.node.createPort();
  *     const client = mqtt.connect({...});
- *     client.on('message', context.node.declaration.onMsg.bind(null, port));
- *     client.subscribeSync('/device/data/latest', context.node.declaration.onError.bind(null, client, port));
- *     client.on('close', port.end.bind(port));
+ *     client.on('message', (topic, message) => {
+ *       port.emit(JSON.parse(message.toString()));
+ *     });
+ *     client.subscribeSync('/device/data/latest', () => {
+ *       port.throw(error);
+ *       client.end();
+ *     });
+ *     client.on('close', port.end);
  *     const completeTimeout = setTimeout(client.end.bind(client), 1000 * 3600 * 24);
- *     port.on('cancel', clearTimeout.bind(null, completeTimeout));
- *     return port.getHandler();
+ *     port.oncancel(clearTimeout.bind(null, completeTimeout));
+ *     return stream;
  *   });
  * ```
  */
-export function subsCbSse(method: SseMethod, path: string): FuncSseBuilder<
+export function streamFuncSse(method: SseMethod, path: string): FuncSseBuilder<
   typeof emptySseInput,
   typeof emptySseOutput,
   Record<never, never>,
-  "SubsCb"
+  "StreamFunc"
 > {
   return new FuncSseBuilder(
     [],
     [method],
     [path],
-    "SubsCb",
+    "StreamFunc",
     emptySseInput,
     emptySseOutput,
     {},

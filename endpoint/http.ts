@@ -20,7 +20,7 @@ export type HttpOutput = z.ZodObject<{
 }>;
 export type HttpTypes = Extract<
   F.FuncTypes,
-  "SyncFunc" | "AsyncFunc" | "AsyncCb"
+  "SyncFunc" | "AsyncFunc"
 >;
 export type FuncHttpExported<
   I extends HttpInput,
@@ -99,7 +99,10 @@ export class FuncHttp<
     return this.output.shape.body;
   }
 }
-
+export type HttpBuildTypes = Exclude<
+  F.BuilderType,
+  "StreamFunc"
+>;
 /**
  * Base Http Builder, Use this to build a Func Node
  */
@@ -107,7 +110,7 @@ export class FuncHttpBuilder<
   I extends HttpInput,
   O extends HttpOutput,
   D extends F.FuncDeclaration,
-  Type extends HttpTypes,
+  Type extends HttpBuildTypes,
 > extends F.FuncBuilder<I, O, D, Type> {
   constructor(
     protected middlewares: FuncMiddlewareExported<
@@ -122,7 +125,7 @@ export class FuncHttpBuilder<
     input: I,
     output: O,
     declaration: D,
-    wrappers: F.FuncWrapper<I, O, D, Type>[],
+    wrappers: F.FuncWrapper<I, O, D, F.BuilderToFuncType<Type>>[],
     ref: { namespace: string; name: string },
     protected tags: string[],
     protected summary: string,
@@ -241,7 +244,7 @@ export class FuncHttpBuilder<
     return this as never;
   }
   override $wrap(
-    wrap: F.FuncWrapper<I, O, D, Type>,
+    wrap: F.FuncWrapper<I, O, D, F.BuilderToFuncType<Type>>,
   ): FuncHttpBuilder<I, O, D, Type> {
     return super.$wrap(wrap) as never;
   }
@@ -256,24 +259,25 @@ export class FuncHttpBuilder<
     return super.$ref(ref) as never;
   }
   override $(
-    implementation: F.FuncImplementation<I, O, D, Type>,
-  ): FuncHttpExported<I, O, D, Type> {
+    implementation: F.BuilderImplementation<I, O, D, Type>,
+  ): FuncHttpExported<I, O, D, F.BuilderToFuncType<Type>> {
     if (this.methods.length === 0) {
       throw new Error("No methods specified");
     }
     if (this.paths.length === 0) {
       throw new Error("No paths specified");
     }
+    const [type, funcImp] = this.toFuncTypes(implementation);
     return new FuncHttp(
       this.middlewares,
       this.methods,
       this.paths,
-      this.type,
+      type,
       this.input,
       this.output,
       this.declaration,
       this.wrappers,
-      implementation,
+      funcImp,
       this.ref,
       this.tags,
       this.summary,
@@ -348,7 +352,7 @@ export function syncFuncHttp(method: HttpMethod, path: string): FuncHttpBuilder<
  * Base Http Builder for asynchronous functions
  * @example
  * ```ts
- * const patchProfile = asyncFuncHttp("patch", "/profile/{userId}")
+ * const patchProfile = asyncLikeHttp("patch", "/profile/{userId}")
  *   .$wrap(new F.WFTimer())
  *   .$reqPath(z.object({ userId: z.string() }))
  *   .$reqBody(z.object({ name: z.string() }))
@@ -359,20 +363,20 @@ export function syncFuncHttp(method: HttpMethod, path: string): FuncHttpBuilder<
  *   });
  * ```
  */
-export function asyncFuncHttp(
+export function asyncLikeHttp(
   method: HttpMethod,
   path: string,
 ): FuncHttpBuilder<
   typeof emptyHttpInput,
   typeof emptyHttpOutput,
   Record<never, never>,
-  "AsyncFunc"
+  "AsyncLike"
 > {
   return new FuncHttpBuilder(
     [],
     [method],
     [path],
-    "AsyncFunc",
+    "AsyncLike",
     emptyHttpInput,
     emptyHttpOutput,
     {},
@@ -393,13 +397,13 @@ export function asyncFuncHttp(
  * Base Http Builder for asynchronous functions
  * @example
  * ```ts
- * const patchProfile = asyncCbHttp("patch", "/profile/{userId}")
+ * const patchProfile = asyncFuncHttp("patch", "/profile/{userId}")
  *   .$wrap(new F.WFTimer())
  *   .$reqPath(z.object({ userId: z.string() }))
  *   .$reqBody(z.object({ name: z.string() }))
  *   .$resBody(z.string())
  *   .$((context, {body: {name}, path: {userId}}) => {
- *     const port = context.node.createPort();
+ *     const [port, promise] = context.node.createPort();
  *     const job = pg.query(`UPDATE users SET name = $1 WHERE id = $2`, [name, userId], (error, _) => {
  *       if (error) {
  *         port.throw(error);
@@ -407,22 +411,25 @@ export function asyncFuncHttp(
  *       }
  *       port.return({ body: "Success" });
  *     });
- *     port.onCancel = pg.cancel.bind(pg, job);
- *     return port.getHandler();
+ *     port.oncancel(pg.cancel.bind(pg, job));
+ *     return promise;
  *   });
  * ```
  */
-export function asyncCbHttp(method: HttpMethod, path: string): FuncHttpBuilder<
+export function asyncFuncHttp(
+  method: HttpMethod,
+  path: string,
+): FuncHttpBuilder<
   typeof emptyHttpInput,
   typeof emptyHttpOutput,
   Record<never, never>,
-  "AsyncCb"
+  "AsyncFunc"
 > {
   return new FuncHttpBuilder(
     [],
     [method],
     [path],
-    "AsyncCb",
+    "AsyncFunc",
     emptyHttpInput,
     emptyHttpOutput,
     {},
