@@ -8,7 +8,7 @@ import {
   FuncHttpBuilder,
   type FuncMiddlewareExported,
   FuncSseBuilder,
-  type HttpTypes,
+  type HttpBuildTypes,
   type MiddlewareInput,
   type MiddlewareOutput,
   type MiddlewareTypes,
@@ -93,7 +93,7 @@ export class Endpoint {
     return new Endpoint(this.middlewares, this.tags, namespace);
   }
   //
-  HTTP<Type extends HttpTypes>(
+  HTTP<Type extends HttpBuildTypes>(
     methods: HttpMethod | HttpMethod[],
     paths: string | string[],
     type: Type,
@@ -157,7 +157,7 @@ export class Endpoint {
     );
   }
   //
-  get<Type extends HttpTypes>(
+  get<Type extends HttpBuildTypes>(
     path: string,
     type: Type,
     meta?: Meta,
@@ -169,7 +169,7 @@ export class Endpoint {
   > {
     return this.HTTP("get", path, type, meta, path);
   }
-  post<Type extends HttpTypes>(
+  post<Type extends HttpBuildTypes>(
     path: string,
     type: Type,
     meta?: Meta,
@@ -181,7 +181,7 @@ export class Endpoint {
   > {
     return this.HTTP("post", path, type, meta, path);
   }
-  patch<Type extends HttpTypes>(
+  patch<Type extends HttpBuildTypes>(
     path: string,
     type: Type,
     meta?: Meta,
@@ -193,7 +193,7 @@ export class Endpoint {
   > {
     return this.HTTP("patch", path, type, meta, path);
   }
-  put<Type extends HttpTypes>(
+  put<Type extends HttpBuildTypes>(
     path: string,
     type: Type,
     meta?: Meta,
@@ -205,7 +205,7 @@ export class Endpoint {
   > {
     return this.HTTP("put", path, type, meta, path);
   }
-  delete<Type extends HttpTypes>(
+  delete<Type extends HttpBuildTypes>(
     path: string,
     type: Type,
     meta?: Meta,
