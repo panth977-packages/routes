@@ -9,7 +9,11 @@ import type {
 } from "../exports.ts";
 
 export type HttpInput = z.ZodObject<{
-  path: z.ZodOptional<z.ZodAny> | z.ZodObject<any>;
+  path:
+    | z.ZodOptional<z.ZodAny>
+    | z.ZodObject<any>
+    | z.ZodArray<any>
+    | z.ZodTuple<any, any>;
   headers: z.ZodOptional<z.ZodAny> | z.ZodObject<any>;
   query: z.ZodOptional<z.ZodAny> | z.ZodObject<any>;
   body: z.ZodType;
@@ -18,22 +22,17 @@ export type HttpOutput = z.ZodObject<{
   headers: z.ZodOptional<z.ZodAny> | z.ZodObject<any>;
   body: z.ZodType;
 }>;
-export type HttpTypes = Extract<
-  F.FuncTypes,
-  "SyncFunc" | "AsyncFunc"
->;
+export type HttpTypes = Extract<F.FuncTypes, "SyncFunc" | "AsyncFunc">;
 export type FuncHttpExported<
   I extends HttpInput,
   O extends HttpOutput,
   D extends F.FuncDeclaration,
   Type extends HttpTypes,
-> =
-  & F.FuncExposed<I, O, Type>
-  & {
-    node: FuncHttp<I, O, D, Type>;
-    output: z.infer<O>;
-    input: z.infer<I>;
-  };
+> = F.FuncExposed<I, O, Type> & {
+  node: FuncHttp<I, O, D, Type>;
+  output: z.infer<O>;
+  input: z.infer<I>;
+};
 /**
  * Base Http Node [Is one of node used in Context.node]
  */
@@ -99,10 +98,7 @@ export class FuncHttp<
     return this.output.shape.body;
   }
 }
-export type HttpBuildTypes = Exclude<
-  F.BuilderType,
-  "StreamFunc"
->;
+export type HttpBuildTypes = Exclude<F.BuilderType, "StreamFunc">;
 /**
  * Base Http Builder, Use this to build a Func Node
  */
@@ -181,7 +177,9 @@ export class FuncHttpBuilder<
   }
   override $input = null as never;
   override $output = null as never;
-  $reqPath<P extends z.ZodObject<any>>(path: P): FuncHttpBuilder<
+  $reqPath<P extends z.ZodObject<any> | z.ZodArray<any> | z.ZodTuple<any, any>>(
+    path: P,
+  ): FuncHttpBuilder<
     z.ZodObject<Omit<I["shape"], "path"> & { path: P }>,
     O,
     D,
@@ -190,7 +188,9 @@ export class FuncHttpBuilder<
     this.input = z.object({ ...this.input.shape, path }) as never;
     return this as never;
   }
-  $reqHeaders<H extends z.ZodObject<any>>(headers: H): FuncHttpBuilder<
+  $reqHeaders<H extends z.ZodObject<any>>(
+    headers: H,
+  ): FuncHttpBuilder<
     z.ZodObject<Omit<I["shape"], "headers"> & { headers: H }>,
     O,
     D,
@@ -199,7 +199,9 @@ export class FuncHttpBuilder<
     this.input = z.object({ ...this.input.shape, headers }) as never;
     return this as never;
   }
-  $reqQuery<Q extends z.ZodObject<any>>(query: Q): FuncHttpBuilder<
+  $reqQuery<Q extends z.ZodObject<any>>(
+    query: Q,
+  ): FuncHttpBuilder<
     z.ZodObject<Omit<I["shape"], "query"> & { query: Q }>,
     O,
     D,
@@ -208,7 +210,9 @@ export class FuncHttpBuilder<
     this.input = z.object({ ...this.input.shape, query }) as never;
     return this as never;
   }
-  $reqBody<B extends z.ZodType>(body: B): FuncHttpBuilder<
+  $reqBody<B extends z.ZodType>(
+    body: B,
+  ): FuncHttpBuilder<
     z.ZodObject<Omit<I["shape"], "body"> & { body: B }>,
     O,
     D,
@@ -221,7 +225,9 @@ export class FuncHttpBuilder<
     this.reqMediaTypes = mt;
     return this as never;
   }
-  $resHeaders<H extends z.ZodObject<any>>(headers: H): FuncHttpBuilder<
+  $resHeaders<H extends z.ZodObject<any>>(
+    headers: H,
+  ): FuncHttpBuilder<
     I,
     z.ZodObject<Omit<O["shape"], "headers"> & { headers: H }>,
     D,
@@ -230,7 +236,9 @@ export class FuncHttpBuilder<
     this.output = z.object({ ...this.output.shape, headers }) as never;
     return this as never;
   }
-  $resBody<B extends z.ZodType>(body: B): FuncHttpBuilder<
+  $resBody<B extends z.ZodType>(
+    body: B,
+  ): FuncHttpBuilder<
     I,
     z.ZodObject<Omit<O["shape"], "body"> & { body: B }>,
     D,
@@ -253,9 +261,10 @@ export class FuncHttpBuilder<
   ): FuncHttpBuilder<I, O, $D & D, Type> {
     return super.$declare(dec) as never;
   }
-  override $ref(
-    ref: { namespace: string; name: string },
-  ): FuncHttpBuilder<I, O, D, Type> {
+  override $ref(ref: {
+    namespace: string;
+    name: string;
+  }): FuncHttpBuilder<I, O, D, Type> {
     return super.$ref(ref) as never;
   }
   override $(
@@ -291,21 +300,27 @@ export class FuncHttpBuilder<
   }
 }
 
-export const emptyHttpInput: z.ZodObject<{
-  path: z.ZodOptional<z.ZodAny>;
-  headers: z.ZodOptional<z.ZodAny>;
-  query: z.ZodOptional<z.ZodAny>;
-  body: z.ZodOptional<z.ZodAny>;
-}, z.core.$strip> = z.object({
+export const emptyHttpInput: z.ZodObject<
+  {
+    path: z.ZodOptional<z.ZodAny>;
+    headers: z.ZodOptional<z.ZodAny>;
+    query: z.ZodOptional<z.ZodAny>;
+    body: z.ZodOptional<z.ZodAny>;
+  },
+  z.core.$strip
+> = z.object({
   path: z.any().optional(),
   headers: z.any().optional(),
   query: z.any().optional(),
   body: z.any().optional(),
 });
-export const emptyHttpOutput: z.ZodObject<{
-  headers: z.ZodOptional<z.ZodAny>;
-  body: z.ZodOptional<z.ZodAny>;
-}, z.core.$strip> = z.object({
+export const emptyHttpOutput: z.ZodObject<
+  {
+    headers: z.ZodOptional<z.ZodAny>;
+    body: z.ZodOptional<z.ZodAny>;
+  },
+  z.core.$strip
+> = z.object({
   headers: z.any().optional(),
   body: z.any().optional(),
 });
@@ -321,7 +336,10 @@ export const emptyHttpOutput: z.ZodObject<{
  *   .$((context, _) => ({ body: fs.readFileSync('./public_config.json') }));
  * ```
  */
-export function syncFuncHttp(method: HttpMethod, path: string): FuncHttpBuilder<
+export function syncFuncHttp(
+  method: HttpMethod,
+  path: string,
+): FuncHttpBuilder<
   typeof emptyHttpInput,
   typeof emptyHttpOutput,
   Record<never, never>,

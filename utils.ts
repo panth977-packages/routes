@@ -124,7 +124,7 @@ export function pathParser(path: string): string[] {
 export abstract class HttpContext extends F.Context<null> {
   abstract get req(): {
     headers: Record<string, string | string[]>;
-    path: Record<string, string>;
+    path: Record<string, string> | string[];
     query: Record<string, string | string[]>;
     body: any;
   };
