@@ -86,15 +86,15 @@ export class Endpoint {
     Type extends MiddlewareTypes,
   >(middleware: FuncMiddlewareExported<I, O, D, Type>): this {
     const e = this.clone();
-    e.middlewares.push(middleware);
+    e.middlewares.push(middleware as never);
     return e;
   }
-  $addTags(...tags: string[]): Endpoint {
+  $addTags(...tags: string[]): this {
     const e = this.clone();
     e.tags.push(...tags);
     return e;
   }
-  $namespace(namespace: string): Endpoint {
+  $namespace(namespace: string): this {
     const e = this.clone();
     e.namespace = namespace;
     return e;
