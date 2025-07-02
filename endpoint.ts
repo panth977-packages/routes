@@ -56,7 +56,7 @@ export class Endpoint {
   static build(): Endpoint {
     return new Endpoint([], [], "Unknown");
   }
-  private constructor(
+  protected constructor(
     middlewares: FuncMiddlewareExported<
       MiddlewareInput,
       MiddlewareOutput,
