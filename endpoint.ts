@@ -70,27 +70,34 @@ export class Endpoint {
     this.tags = tags;
     this.namespace = namespace;
   }
+  //
+  protected clone(): this {
+    return new Endpoint(
+      [...this.middlewares],
+      [...this.tags],
+      this.namespace,
+    ) as this;
+  }
+
   $middlewares<
     I extends MiddlewareInput,
     O extends MiddlewareOutput,
     D extends F.FuncDeclaration,
     Type extends MiddlewareTypes,
-  >(middleware: FuncMiddlewareExported<I, O, D, Type>): Endpoint {
-    return new Endpoint(
-      [...this.middlewares, middleware] as never,
-      this.tags,
-      this.namespace,
-    );
+  >(middleware: FuncMiddlewareExported<I, O, D, Type>): this {
+    const e = this.clone();
+    e.middlewares.push(middleware);
+    return e;
   }
   $addTags(...tags: string[]): Endpoint {
-    return new Endpoint(
-      this.middlewares,
-      [...this.tags, ...tags],
-      this.namespace,
-    );
+    const e = this.clone();
+    e.tags.push(...tags);
+    return e;
   }
   $namespace(namespace: string): Endpoint {
-    return new Endpoint(this.middlewares, this.tags, namespace);
+    const e = this.clone();
+    e.namespace = namespace;
+    return e;
   }
   //
   HTTP<Type extends HttpBuildTypes>(
