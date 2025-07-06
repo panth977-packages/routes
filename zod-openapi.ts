@@ -16,7 +16,6 @@ import type {
   SseOutput,
   SseTypes,
 } from "./endpoint/sse.ts";
-import type { F } from "@panth977/functions";
 export type HttpMethod =
   | "get"
   | "post"
@@ -28,8 +27,8 @@ export type HttpMethod =
   | "trace";
 
 export type EndpointBuild =
-  | FuncHttpExported<HttpInput, HttpOutput, F.FuncDeclaration, HttpTypes>
-  | FuncSseExported<SseInput, SseOutput, F.FuncDeclaration, SseTypes>;
+  | FuncHttpExported<HttpInput, HttpOutput, HttpTypes>
+  | FuncSseExported<SseInput, SseOutput, SseTypes>;
 
 // JSON Schema for OpenAPI 3.1 (loosely modeled for flexibility)
 export type JsonSchema = z.core.JSONSchema.BaseSchema;
