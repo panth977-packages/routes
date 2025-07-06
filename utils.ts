@@ -158,11 +158,10 @@ function onError<T>(
 function executeFunc<
   I extends F.FuncInput,
   O extends F.FuncOutput,
-  D extends F.FuncDeclaration,
   Type extends Extract<F.FuncTypes, "SyncFunc" | "AsyncFunc">,
   C extends F.Context,
 >(
-  func: F.FuncExported<I, O, D, Type>,
+  func: F.FuncExported<I, O, Type>,
   context: C,
   input: z.infer<I>,
   cb: (result: ["Error", unknown] | ["Data", z.infer<O>]) => void,
@@ -188,12 +187,11 @@ function executeFunc<
 export class HttpExecutor<
   I extends HttpInput,
   O extends HttpOutput,
-  D extends F.FuncDeclaration,
   Type extends HttpTypes,
   C extends HttpContext,
 > {
   readonly context: C;
-  readonly http: FuncHttpExported<I, O, D, Type>;
+  readonly http: FuncHttpExported<I, O, Type>;
   protected status:
     | "WaitingToStart"
     | "Running"
@@ -204,7 +202,7 @@ export class HttpExecutor<
     return this.status;
   }
   currentCancel: VoidFunction | null = null;
-  constructor(context: C, http: FuncHttpExported<I, O, D, Type>) {
+  constructor(context: C, http: FuncHttpExported<I, O, Type>) {
     this.context = context;
     this.http = http;
   }
@@ -304,12 +302,11 @@ export abstract class SseContext extends F.Context<null> {
 export class SseExecutor<
   I extends SseInput,
   O extends SseOutput,
-  D extends F.FuncDeclaration,
   Type extends SseTypes,
   C extends SseContext,
 > {
   readonly context: C;
-  readonly sse: FuncSseExported<I, O, D, Type>;
+  readonly sse: FuncSseExported<I, O, Type>;
   private status:
     | "WaitingToStart"
     | "Running"
@@ -317,7 +314,7 @@ export class SseExecutor<
     | "SuccessExit"
     | "CanceledExit" = "WaitingToStart";
   currentCancel: VoidFunction | null = null;
-  constructor(context: C, sse: FuncSseExported<I, O, D, Type>) {
+  constructor(context: C, sse: FuncSseExported<I, O, Type>) {
     this.context = context;
     this.sse = sse;
   }

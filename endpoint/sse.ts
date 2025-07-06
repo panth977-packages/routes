@@ -18,12 +18,11 @@ export type SseTypes = Extract<F.FuncTypes, "StreamFunc">;
 export type FuncSseExported<
   I extends SseInput,
   O extends SseOutput,
-  D extends F.FuncDeclaration,
   Type extends SseTypes,
 > =
   & F.FuncExposed<I, O, Type>
   & {
-    node: FuncSse<I, O, D, Type>;
+    node: FuncSse<I, O, Type>;
     output: z.infer<O>;
     input: z.infer<I>;
   };
@@ -33,14 +32,12 @@ export type FuncSseExported<
 export class FuncSse<
   I extends SseInput,
   O extends SseOutput,
-  D extends F.FuncDeclaration,
   Type extends SseTypes,
-> extends F.Func<I, O, D, Type> {
+> extends F.Func<I, O, Type> {
   constructor(
     readonly middlewares: FuncMiddlewareExported<
       MiddlewareInput,
       MiddlewareOutput,
-      F.FuncDeclaration,
       MiddlewareTypes
     >[],
     readonly methods: SseMethod[],
@@ -48,9 +45,8 @@ export class FuncSse<
     type: Type,
     input: I,
     output: O,
-    declaration: D,
-    wrappers: F.FuncWrapper<I, O, D, Type>[],
-    implementation: F.FuncImplementation<I, O, D, Type>,
+    wrappers: F.FuncWrapper<I, O, Type>[],
+    implementation: F.FuncImplementation<I, O, Type>,
     ref: { namespace: string; name: string },
     readonly encoder: (data: z.infer<O>) => string,
     readonly tags: string[],
@@ -60,7 +56,7 @@ export class FuncSse<
     readonly docsOrder: number,
     readonly showIndocs: boolean,
   ) {
-    super(type, input, output, declaration, wrappers, implementation, ref);
+    super(type, input, output, wrappers, implementation, ref);
     Object.freeze(this.middlewares);
   }
   addTags(...tags: string[]) {
@@ -69,7 +65,7 @@ export class FuncSse<
   addSecurity(schemeName: string, scheme: SecurityScheme) {
     this.security[schemeName] = scheme;
   }
-  override create(): FuncSseExported<I, O, D, Type> {
+  override create(): FuncSseExported<I, O, Type> {
     return super.create() as never;
   }
   get reqPath(): I["shape"]["path"] {
@@ -82,10 +78,6 @@ export class FuncSse<
     return this.output;
   }
 }
-export type SseBuildTypes = Extract<
-  F.BuilderType,
-  "StreamFunc"
->;
 
 /**
  * Base Sse Builder, Use this to build a Func Node
@@ -93,14 +85,12 @@ export type SseBuildTypes = Extract<
 export class FuncSseBuilder<
   I extends SseInput,
   O extends SseOutput,
-  D extends F.FuncDeclaration,
-  Type extends SseBuildTypes,
-> extends F.FuncBuilder<I, O, D, Type> {
+  Type extends SseTypes,
+> extends F.FuncBuilder<I, O, Type> {
   constructor(
     protected middlewares: FuncMiddlewareExported<
       MiddlewareInput,
       MiddlewareOutput,
-      F.FuncDeclaration,
       MiddlewareTypes
     >[],
     protected methods: SseMethod[],
@@ -108,8 +98,7 @@ export class FuncSseBuilder<
     type: Type,
     input: I,
     output: O,
-    declaration: D,
-    wrappers: F.FuncWrapper<I, O, D, F.BuilderToFuncType<Type>>[],
+    wrappers: F.FuncWrapper<I, O, Type>[],
     ref: { namespace: string; name: string },
     protected encoder: (data: z.infer<O>) => string,
     protected tags: string[],
@@ -119,14 +108,13 @@ export class FuncSseBuilder<
     protected docsOrder: number,
     protected showIndocs: boolean,
   ) {
-    super(type, input, output, declaration, wrappers, ref);
+    super(type, input, output, wrappers, ref);
   }
   $middlewares<
     I extends MiddlewareInput,
     O extends MiddlewareOutput,
-    D extends F.FuncDeclaration,
     Type extends MiddlewareTypes,
-  >(middleware: FuncMiddlewareExported<I, O, D, Type>): this {
+  >(middleware: FuncMiddlewareExported<I, O, Type>): this {
     this.middlewares.push(middleware as never);
     return this;
   }
@@ -167,7 +155,6 @@ export class FuncSseBuilder<
   $reqPath<P extends z.ZodObject<any>>(path: P): FuncSseBuilder<
     z.ZodObject<Omit<I["shape"], "path"> & { path: P }>,
     O,
-    D,
     Type
   > {
     this.input = z.object({ ...this.input.shape, path }) as never;
@@ -176,7 +163,6 @@ export class FuncSseBuilder<
   $reqQuery<Q extends z.ZodObject<any>>(query: Q): FuncSseBuilder<
     z.ZodObject<Omit<I["shape"], "query"> & { query: Q }>,
     O,
-    D,
     Type
   > {
     this.input = z.object({ ...this.input.shape, query }) as never;
@@ -185,7 +171,6 @@ export class FuncSseBuilder<
   $resEvent<E extends z.ZodType>(event: E): FuncSseBuilder<
     I,
     E,
-    D,
     Type
   > {
     this.output = event as never;
@@ -194,47 +179,39 @@ export class FuncSseBuilder<
   $encoder(encoder: (data: z.infer<O>) => string): FuncSseBuilder<
     I,
     O,
-    D,
     Type
   > {
     this.encoder = encoder;
     return this;
   }
   override $wrap(
-    wrap: F.FuncWrapper<I, O, D, F.BuilderToFuncType<Type>>,
-  ): FuncSseBuilder<I, O, D, Type> {
+    wrap: F.FuncWrapper<I, O, Type>,
+  ): FuncSseBuilder<I, O, Type> {
     return super.$wrap(wrap) as never;
-  }
-  override $declare<$D extends F.FuncDeclaration>(
-    dec: $D,
-  ): FuncSseBuilder<I, O, $D & D, Type> {
-    return super.$declare(dec) as never;
   }
   override $ref(
     ref: { namespace: string; name: string },
-  ): FuncSseBuilder<I, O, D, Type> {
+  ): FuncSseBuilder<I, O, Type> {
     return super.$ref(ref) as never;
   }
   override $(
-    implementation: F.BuilderImplementation<I, O, D, Type>,
-  ): FuncSseExported<I, O, D, F.BuilderToFuncType<Type>> {
+    implementation: F.FuncImplementation<I, O, Type>,
+  ): FuncSseExported<I, O, Type> {
     if (this.methods.length === 0) {
       throw new Error("No methods specified");
     }
     if (this.paths.length === 0) {
       throw new Error("No paths specified");
     }
-    const [type, funcImp] = this.toFuncTypes(implementation);
     return new FuncSse(
       this.middlewares,
       this.methods,
       this.paths,
-      type,
+      this.type,
       this.input,
       this.output,
-      this.declaration,
       this.wrappers,
-      funcImp,
+      implementation,
       this.ref,
       this.encoder,
       this.tags,
@@ -295,7 +272,6 @@ export function defaultEncoder<OT>(data: OT): string {
 export function streamFuncSse(method: SseMethod, path: string): FuncSseBuilder<
   typeof emptySseInput,
   typeof emptySseOutput,
-  Record<never, never>,
   "StreamFunc"
 > {
   return new FuncSseBuilder(
@@ -305,7 +281,6 @@ export function streamFuncSse(method: SseMethod, path: string): FuncSseBuilder<
     "StreamFunc",
     emptySseInput,
     emptySseOutput,
-    {},
     [],
     { namespace: "Unknown", name: "Unknown" },
     defaultEncoder,

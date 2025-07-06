@@ -17,12 +17,11 @@ export type MiddlewareTypes = Extract<
 export type FuncMiddlewareExported<
   I extends MiddlewareInput,
   O extends MiddlewareOutput,
-  D extends F.FuncDeclaration,
   Type extends MiddlewareTypes,
 > =
   & F.FuncExposed<I, O, Type>
   & {
-    node: FuncMiddleware<I, O, D, Type>;
+    node: FuncMiddleware<I, O, Type>;
     output: z.infer<O>;
     input: z.infer<I>;
   };
@@ -32,24 +31,22 @@ export type FuncMiddlewareExported<
 export class FuncMiddleware<
   I extends MiddlewareInput,
   O extends MiddlewareOutput,
-  D extends F.FuncDeclaration,
   Type extends MiddlewareTypes,
-> extends F.Func<I, O, D, Type> {
+> extends F.Func<I, O, Type> {
   protected state: F.ContextState<z.infer<O["shape"]["opt"]>>;
   constructor(
     type: Type,
     input: I,
     output: O,
-    declaration: D,
-    wrappers: F.FuncWrapper<I, O, D, Type>[],
-    implementation: F.FuncImplementation<I, O, D, Type>,
+    wrappers: F.FuncWrapper<I, O, Type>[],
+    implementation: F.FuncImplementation<I, O, Type>,
     ref: { namespace: string; name: string },
     readonly tags: string[],
     readonly summary: string,
     readonly description: string,
     readonly security: Record<string, SecurityScheme>,
   ) {
-    super(type, input, output, declaration, wrappers, implementation, ref);
+    super(type, input, output, wrappers, implementation, ref);
     this.state = F.ContextState.Cascade("Middleware", "create&read");
   }
 
@@ -59,11 +56,10 @@ export class FuncMiddleware<
   static setOpt<
     I extends MiddlewareInput,
     O extends MiddlewareOutput,
-    D extends F.FuncDeclaration,
     Type extends MiddlewareTypes,
   >(
     context: F.Context,
-    middleware: FuncMiddleware<I, O, D, Type>,
+    middleware: FuncMiddleware<I, O, Type>,
     opt: z.infer<O["shape"]["opt"]>,
   ): void {
     middleware.state.set(context, opt);
@@ -74,7 +70,7 @@ export class FuncMiddleware<
   addSecurity(schemeName: string, scheme: SecurityScheme) {
     this.security[schemeName] = scheme;
   }
-  override create(): FuncMiddlewareExported<I, O, D, Type> {
+  override create(): FuncMiddlewareExported<I, O, Type> {
     return super.create() as never;
   }
   get reqHeaders(): I["shape"]["headers"] {
@@ -90,10 +86,6 @@ export class FuncMiddleware<
     return this.output.shape.opt;
   }
 }
-export type MiddlewareBuildTypes = Exclude<
-  F.BuilderType,
-  "StreamFunc"
->;
 
 /**
  * Base Middleware Builder, Use this to build a Func Node
@@ -101,22 +93,20 @@ export type MiddlewareBuildTypes = Exclude<
 export class FuncMiddlewareBuilder<
   I extends MiddlewareInput,
   O extends MiddlewareOutput,
-  D extends F.FuncDeclaration,
-  Type extends MiddlewareBuildTypes,
-> extends F.FuncBuilder<I, O, D, Type> {
+  Type extends MiddlewareTypes,
+> extends F.FuncBuilder<I, O, Type> {
   constructor(
     type: Type,
     input: I,
     output: O,
-    declaration: D,
-    wrappers: F.FuncWrapper<I, O, D, F.BuilderToFuncType<Type>>[],
+    wrappers: F.FuncWrapper<I, O, Type>[],
     ref: { namespace: string; name: string },
     protected tags: string[],
     protected summary: string,
     protected description: string,
     protected security: Record<string, SecurityScheme>,
   ) {
-    super(type, input, output, declaration, wrappers, ref);
+    super(type, input, output, wrappers, ref);
   }
   $addTags(...tags: string[]): this {
     this.tags.push(...tags);
@@ -139,7 +129,6 @@ export class FuncMiddlewareBuilder<
   $reqHeaders<H extends z.ZodObject<any>>(headers: H): FuncMiddlewareBuilder<
     z.ZodObject<Omit<I["shape"], "headers"> & { headers: H }>,
     O,
-    D,
     Type
   > {
     this.input = z.object({ ...this.input.shape, headers }) as never;
@@ -148,7 +137,6 @@ export class FuncMiddlewareBuilder<
   $reqQuery<Q extends z.ZodObject<any>>(query: Q): FuncMiddlewareBuilder<
     z.ZodObject<Omit<I["shape"], "query"> & { query: Q }>,
     O,
-    D,
     Type
   > {
     this.input = z.object({ ...this.input.shape, query }) as never;
@@ -157,7 +145,6 @@ export class FuncMiddlewareBuilder<
   $resHeaders<H extends z.ZodObject<any>>(headers: H): FuncMiddlewareBuilder<
     I,
     z.ZodObject<Omit<O["shape"], "headers"> & { headers: H }>,
-    D,
     Type
   > {
     this.output = z.object({ ...this.output.shape, headers }) as never;
@@ -166,38 +153,30 @@ export class FuncMiddlewareBuilder<
   $contextOpt<Opt extends z.ZodType>(opt: Opt): FuncMiddlewareBuilder<
     I,
     z.ZodObject<Omit<O["shape"], "opt"> & { opt: Opt }>,
-    D,
     Type
   > {
     this.output = z.object({ ...this.output.shape, opt }) as never;
     return this as never;
   }
   override $wrap(
-    wrap: F.FuncWrapper<I, O, D, F.BuilderToFuncType<Type>>,
-  ): FuncMiddlewareBuilder<I, O, D, Type> {
+    wrap: F.FuncWrapper<I, O, Type>,
+  ): FuncMiddlewareBuilder<I, O, Type> {
     return super.$wrap(wrap) as never;
-  }
-  override $declare<$D extends F.FuncDeclaration>(
-    dec: $D,
-  ): FuncMiddlewareBuilder<I, O, $D & D, Type> {
-    return super.$declare(dec) as never;
   }
   override $ref(
     ref: { namespace: string; name: string },
-  ): FuncMiddlewareBuilder<I, O, D, Type> {
+  ): FuncMiddlewareBuilder<I, O, Type> {
     return super.$ref(ref) as never;
   }
   override $(
-    implementation: F.BuilderImplementation<I, O, D, Type>,
-  ): FuncMiddlewareExported<I, O, D, F.BuilderToFuncType<Type>> {
-    const [type, funcImp] = this.toFuncTypes(implementation);
+    implementation: F.FuncImplementation<I, O, Type>,
+  ): FuncMiddlewareExported<I, O, Type> {
     return new FuncMiddleware(
-      type,
+      this.type,
       this.input,
       this.output,
-      this.declaration,
       this.wrappers,
-      funcImp,
+      implementation,
       this.ref,
       this.tags,
       this.summary,
@@ -247,51 +226,12 @@ const emptyOutput: z.ZodObject<{
 export function syncFuncMiddleware(): FuncMiddlewareBuilder<
   typeof emptyInput,
   typeof emptyOutput,
-  Record<never, never>,
   "SyncFunc"
 > {
   return new FuncMiddlewareBuilder(
     "SyncFunc",
     emptyInput,
     emptyOutput,
-    {},
-    [],
-    { namespace: "Unknown", name: "Unknown" },
-    [],
-    "",
-    "",
-    {},
-  );
-}
-
-/**
- * Base Middleware Builder for asynchronous functions
- * @example
- * ```ts
- * const rateLimitMiddleware = asyncLikeMiddleware()
- *   .$wrap(new F.AsyncFuncTime())
- *   .$wrap(new F.AsyncFuncMemo())
- *   .$(async (context, _) => {
- *     const opt = jwtDecodeMiddleware.node.getOpt(context);
- *     if (!opt) throw HttpError.Unauthorized("JWT not provided!");
- *     const result = await redis.incr(`RateLimit:${opt.uid}`);
- *     if (+result > 200) throw HttpError.Forbidden("Rate limit exceeded!");
- *     if (result === 1) await redis.expire(`RateLimit:${opt.uid}`, 60);
- *     return {};
- *   });
- * ```
- */
-export function asyncLikeMiddleware(): FuncMiddlewareBuilder<
-  typeof emptyInput,
-  typeof emptyOutput,
-  Record<never, never>,
-  "AsyncLike"
-> {
-  return new FuncMiddlewareBuilder(
-    "AsyncLike",
-    emptyInput,
-    emptyOutput,
-    {},
     [],
     { namespace: "Unknown", name: "Unknown" },
     [],
@@ -336,14 +276,12 @@ export function asyncLikeMiddleware(): FuncMiddlewareBuilder<
 export function asyncFuncMiddleware(): FuncMiddlewareBuilder<
   typeof emptyInput,
   typeof emptyOutput,
-  Record<never, never>,
   "AsyncFunc"
 > {
   return new FuncMiddlewareBuilder(
     "AsyncFunc",
     emptyInput,
     emptyOutput,
-    {},
     [],
     { namespace: "Unknown", name: "Unknown" },
     [],

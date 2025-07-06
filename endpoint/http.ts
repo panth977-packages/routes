@@ -26,10 +26,9 @@ export type HttpTypes = Extract<F.FuncTypes, "SyncFunc" | "AsyncFunc">;
 export type FuncHttpExported<
   I extends HttpInput,
   O extends HttpOutput,
-  D extends F.FuncDeclaration,
   Type extends HttpTypes,
 > = F.FuncExposed<I, O, Type> & {
-  node: FuncHttp<I, O, D, Type>;
+  node: FuncHttp<I, O, Type>;
   output: z.infer<O>;
   input: z.infer<I>;
 };
@@ -39,14 +38,12 @@ export type FuncHttpExported<
 export class FuncHttp<
   I extends HttpInput,
   O extends HttpOutput,
-  D extends F.FuncDeclaration,
   Type extends HttpTypes,
-> extends F.Func<I, O, D, Type> {
+> extends F.Func<I, O, Type> {
   constructor(
     readonly middlewares: FuncMiddlewareExported<
       MiddlewareInput,
       MiddlewareOutput,
-      F.FuncDeclaration,
       MiddlewareTypes
     >[],
     readonly methods: HttpMethod[],
@@ -54,9 +51,8 @@ export class FuncHttp<
     type: Type,
     input: I,
     output: O,
-    declaration: D,
-    wrappers: F.FuncWrapper<I, O, D, Type>[],
-    implementation: F.FuncImplementation<I, O, D, Type>,
+    wrappers: F.FuncWrapper<I, O, Type>[],
+    implementation: F.FuncImplementation<I, O, Type>,
     ref: { namespace: string; name: string },
     readonly tags: string[],
     readonly summary: string,
@@ -67,7 +63,7 @@ export class FuncHttp<
     readonly docsOrder: number,
     readonly showIndocs: boolean,
   ) {
-    super(type, input, output, declaration, wrappers, implementation, ref);
+    super(type, input, output, wrappers, implementation, ref);
     Object.freeze(middlewares);
   }
   addTags(...tags: string[]) {
@@ -76,7 +72,7 @@ export class FuncHttp<
   addSecurity(schemeName: string, scheme: SecurityScheme) {
     this.security[schemeName] = scheme;
   }
-  override create(): FuncHttpExported<I, O, D, Type> {
+  override create(): FuncHttpExported<I, O, Type> {
     return super.create() as never;
   }
   get reqPath(): I["shape"]["path"] {
@@ -98,21 +94,18 @@ export class FuncHttp<
     return this.output.shape.body;
   }
 }
-export type HttpBuildTypes = Exclude<F.BuilderType, "StreamFunc">;
 /**
  * Base Http Builder, Use this to build a Func Node
  */
 export class FuncHttpBuilder<
   I extends HttpInput,
   O extends HttpOutput,
-  D extends F.FuncDeclaration,
-  Type extends HttpBuildTypes,
-> extends F.FuncBuilder<I, O, D, Type> {
+  Type extends HttpTypes,
+> extends F.FuncBuilder<I, O, Type> {
   constructor(
     protected middlewares: FuncMiddlewareExported<
       MiddlewareInput,
       MiddlewareOutput,
-      F.FuncDeclaration,
       MiddlewareTypes
     >[],
     protected methods: HttpMethod[],
@@ -120,8 +113,7 @@ export class FuncHttpBuilder<
     type: Type,
     input: I,
     output: O,
-    declaration: D,
-    wrappers: F.FuncWrapper<I, O, D, F.BuilderToFuncType<Type>>[],
+    wrappers: F.FuncWrapper<I, O, Type>[],
     ref: { namespace: string; name: string },
     protected tags: string[],
     protected summary: string,
@@ -132,14 +124,13 @@ export class FuncHttpBuilder<
     protected docsOrder: number,
     protected showIndocs: boolean,
   ) {
-    super(type, input, output, declaration, wrappers, ref);
+    super(type, input, output, wrappers, ref);
   }
   $middlewares<
     I extends MiddlewareInput,
     O extends MiddlewareOutput,
-    D extends F.FuncDeclaration,
     Type extends MiddlewareTypes,
-  >(middleware: FuncMiddlewareExported<I, O, D, Type>): this {
+  >(middleware: FuncMiddlewareExported<I, O, Type>): this {
     this.middlewares.push(middleware as never);
     return this;
   }
@@ -182,7 +173,6 @@ export class FuncHttpBuilder<
   ): FuncHttpBuilder<
     z.ZodObject<Omit<I["shape"], "path"> & { path: P }>,
     O,
-    D,
     Type
   > {
     this.input = z.object({ ...this.input.shape, path }) as never;
@@ -193,7 +183,6 @@ export class FuncHttpBuilder<
   ): FuncHttpBuilder<
     z.ZodObject<Omit<I["shape"], "headers"> & { headers: H }>,
     O,
-    D,
     Type
   > {
     this.input = z.object({ ...this.input.shape, headers }) as never;
@@ -204,7 +193,6 @@ export class FuncHttpBuilder<
   ): FuncHttpBuilder<
     z.ZodObject<Omit<I["shape"], "query"> & { query: Q }>,
     O,
-    D,
     Type
   > {
     this.input = z.object({ ...this.input.shape, query }) as never;
@@ -215,13 +203,12 @@ export class FuncHttpBuilder<
   ): FuncHttpBuilder<
     z.ZodObject<Omit<I["shape"], "body"> & { body: B }>,
     O,
-    D,
     Type
   > {
     this.input = z.object({ ...this.input.shape, body }) as never;
     return this as never;
   }
-  $reqMediaType(mt: string): FuncHttpBuilder<I, O, D, Type> {
+  $reqMediaType(mt: string): FuncHttpBuilder<I, O, Type> {
     this.reqMediaTypes = mt;
     return this as never;
   }
@@ -230,7 +217,6 @@ export class FuncHttpBuilder<
   ): FuncHttpBuilder<
     I,
     z.ZodObject<Omit<O["shape"], "headers"> & { headers: H }>,
-    D,
     Type
   > {
     this.output = z.object({ ...this.output.shape, headers }) as never;
@@ -241,52 +227,44 @@ export class FuncHttpBuilder<
   ): FuncHttpBuilder<
     I,
     z.ZodObject<Omit<O["shape"], "body"> & { body: B }>,
-    D,
     Type
   > {
     this.output = z.object({ ...this.output.shape, body }) as never;
     return this as never;
   }
-  $resMediaType(mt: string): FuncHttpBuilder<I, O, D, Type> {
+  $resMediaType(mt: string): FuncHttpBuilder<I, O, Type> {
     this.resMediaTypes = mt;
     return this as never;
   }
   override $wrap(
-    wrap: F.FuncWrapper<I, O, D, F.BuilderToFuncType<Type>>,
-  ): FuncHttpBuilder<I, O, D, Type> {
+    wrap: F.FuncWrapper<I, O, Type>,
+  ): FuncHttpBuilder<I, O, Type> {
     return super.$wrap(wrap) as never;
-  }
-  override $declare<$D extends F.FuncDeclaration>(
-    dec: $D,
-  ): FuncHttpBuilder<I, O, $D & D, Type> {
-    return super.$declare(dec) as never;
   }
   override $ref(ref: {
     namespace: string;
     name: string;
-  }): FuncHttpBuilder<I, O, D, Type> {
+  }): FuncHttpBuilder<I, O, Type> {
     return super.$ref(ref) as never;
   }
   override $(
-    implementation: F.BuilderImplementation<I, O, D, Type>,
-  ): FuncHttpExported<I, O, D, F.BuilderToFuncType<Type>> {
+    implementation: F.FuncImplementation<I, O, Type>,
+  ): FuncHttpExported<I, O, Type> {
     if (this.methods.length === 0) {
       throw new Error("No methods specified");
     }
     if (this.paths.length === 0) {
       throw new Error("No paths specified");
     }
-    const [type, funcImp] = this.toFuncTypes(implementation);
     return new FuncHttp(
       this.middlewares,
       this.methods,
       this.paths,
-      type,
+      this.type,
       this.input,
       this.output,
-      this.declaration,
       this.wrappers,
-      funcImp,
+      implementation,
       this.ref,
       this.tags,
       this.summary,
@@ -342,7 +320,6 @@ export function syncFuncHttp(
 ): FuncHttpBuilder<
   typeof emptyHttpInput,
   typeof emptyHttpOutput,
-  Record<never, never>,
   "SyncFunc"
 > {
   return new FuncHttpBuilder(
@@ -352,52 +329,6 @@ export function syncFuncHttp(
     "SyncFunc",
     emptyHttpInput,
     emptyHttpOutput,
-    {},
-    [],
-    { namespace: "Unknown", name: "Unknown" },
-    [],
-    "",
-    "",
-    {},
-    "",
-    "",
-    Number.MAX_SAFE_INTEGER,
-    true,
-  );
-}
-
-/**
- * Base Http Builder for asynchronous functions
- * @example
- * ```ts
- * const patchProfile = asyncLikeHttp("patch", "/profile/{userId}")
- *   .$wrap(new F.WFTimer())
- *   .$reqPath(z.object({ userId: z.string() }))
- *   .$reqBody(z.object({ name: z.string() }))
- *   .$resBody(z.string())
- *   .$(async (context, {body: {name}, path: {userId}}) => {
- *     await pg.query(`UPDATE users SET name = $1 WHERE id = $2`, [name, userId]);
- *     return { body: "Success" };
- *   });
- * ```
- */
-export function asyncLikeHttp(
-  method: HttpMethod,
-  path: string,
-): FuncHttpBuilder<
-  typeof emptyHttpInput,
-  typeof emptyHttpOutput,
-  Record<never, never>,
-  "AsyncLike"
-> {
-  return new FuncHttpBuilder(
-    [],
-    [method],
-    [path],
-    "AsyncLike",
-    emptyHttpInput,
-    emptyHttpOutput,
-    {},
     [],
     { namespace: "Unknown", name: "Unknown" },
     [],
@@ -440,7 +371,6 @@ export function asyncFuncHttp(
 ): FuncHttpBuilder<
   typeof emptyHttpInput,
   typeof emptyHttpOutput,
-  Record<never, never>,
   "AsyncFunc"
 > {
   return new FuncHttpBuilder(
@@ -450,7 +380,6 @@ export function asyncFuncHttp(
     "AsyncFunc",
     emptyHttpInput,
     emptyHttpOutput,
-    {},
     [],
     { namespace: "Unknown", name: "Unknown" },
     [],
