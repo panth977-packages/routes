@@ -1,6 +1,6 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 import { F } from "@panth977/functions";
-import type { HttpMethod, SecurityScheme } from "../zod-openapi.ts";
+import type { HttpMethod, SecuritySchemeObject } from "../zod-openapi.ts";
 import type {
   FuncMiddlewareExported,
   MiddlewareInput,
@@ -57,7 +57,7 @@ export class FuncHttp<
     readonly tags: string[],
     readonly summary: string,
     readonly description: string,
-    readonly security: Record<string, SecurityScheme>,
+    readonly security: Record<string, SecuritySchemeObject>,
     readonly reqMediaTypes: string,
     readonly resMediaTypes: string,
     readonly docsOrder: number,
@@ -69,7 +69,7 @@ export class FuncHttp<
   addTags(...tags: string[]) {
     this.tags.push(...tags);
   }
-  addSecurity(schemeName: string, scheme: SecurityScheme) {
+  addSecurity(schemeName: string, scheme: SecuritySchemeObject) {
     this.security[schemeName] = scheme;
   }
   override create(): FuncHttpExported<I, O, Type> {
@@ -118,7 +118,7 @@ export class FuncHttpBuilder<
     protected tags: string[],
     protected summary: string,
     protected description: string,
-    protected security: Record<string, SecurityScheme>,
+    protected security: Record<string, SecuritySchemeObject>,
     protected reqMediaTypes: string,
     protected resMediaTypes: string,
     protected docsOrder: number,
@@ -154,7 +154,7 @@ export class FuncHttpBuilder<
     this.tags.push(...tags);
     return this;
   }
-  $addSecurity(schemeName: string, scheme: SecurityScheme): this {
+  $addSecurity(schemeName: string, scheme: SecuritySchemeObject): this {
     this.security[schemeName] = scheme;
     return this;
   }
@@ -236,9 +236,7 @@ export class FuncHttpBuilder<
     this.resMediaTypes = mt;
     return this as never;
   }
-  override $wrap(
-    wrap: F.FuncWrapper<I, O, Type>,
-  ): FuncHttpBuilder<I, O, Type> {
+  override $wrap(wrap: F.FuncWrapper<I, O, Type>): FuncHttpBuilder<I, O, Type> {
     return super.$wrap(wrap) as never;
   }
   override $ref(ref: {
@@ -285,7 +283,7 @@ export const emptyHttpInput: z.ZodObject<
     query: z.ZodOptional<z.ZodAny>;
     body: z.ZodOptional<z.ZodAny>;
   },
-  z.core.$strip
+  "strip"
 > = z.object({
   path: z.any().optional(),
   headers: z.any().optional(),
@@ -297,7 +295,7 @@ export const emptyHttpOutput: z.ZodObject<
     headers: z.ZodOptional<z.ZodAny>;
     body: z.ZodOptional<z.ZodAny>;
   },
-  z.core.$strip
+  "strip"
 > = z.object({
   headers: z.any().optional(),
   body: z.any().optional(),
@@ -317,11 +315,7 @@ export const emptyHttpOutput: z.ZodObject<
 export function syncFuncHttp(
   method: HttpMethod,
   path: string,
-): FuncHttpBuilder<
-  typeof emptyHttpInput,
-  typeof emptyHttpOutput,
-  "SyncFunc"
-> {
+): FuncHttpBuilder<typeof emptyHttpInput, typeof emptyHttpOutput, "SyncFunc"> {
   return new FuncHttpBuilder(
     [],
     [method],
@@ -368,11 +362,7 @@ export function syncFuncHttp(
 export function asyncFuncHttp(
   method: HttpMethod,
   path: string,
-): FuncHttpBuilder<
-  typeof emptyHttpInput,
-  typeof emptyHttpOutput,
-  "AsyncFunc"
-> {
+): FuncHttpBuilder<typeof emptyHttpInput, typeof emptyHttpOutput, "AsyncFunc"> {
   return new FuncHttpBuilder(
     [],
     [method],

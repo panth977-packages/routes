@@ -1,6 +1,6 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 import { F } from "@panth977/functions";
-import type { HttpMethod, SecurityScheme } from "../zod-openapi.ts";
+import type { HttpMethod, SecuritySchemeObject } from "../zod-openapi.ts";
 import type { FuncMiddlewareExported } from "../exports.ts";
 import type {
   MiddlewareInput,
@@ -19,13 +19,11 @@ export type FuncSseExported<
   I extends SseInput,
   O extends SseOutput,
   Type extends SseTypes,
-> =
-  & F.FuncExposed<I, O, Type>
-  & {
-    node: FuncSse<I, O, Type>;
-    output: z.infer<O>;
-    input: z.infer<I>;
-  };
+> = F.FuncExposed<I, O, Type> & {
+  node: FuncSse<I, O, Type>;
+  output: z.infer<O>;
+  input: z.infer<I>;
+};
 /**
  * Base Sse Node [Is one of node used in Context.node]
  */
@@ -52,7 +50,7 @@ export class FuncSse<
     readonly tags: string[],
     readonly summary: string,
     readonly description: string,
-    readonly security: Record<string, SecurityScheme>,
+    readonly security: Record<string, SecuritySchemeObject>,
     readonly docsOrder: number,
     readonly showIndocs: boolean,
   ) {
@@ -62,7 +60,7 @@ export class FuncSse<
   addTags(...tags: string[]) {
     this.tags.push(...tags);
   }
-  addSecurity(schemeName: string, scheme: SecurityScheme) {
+  addSecurity(schemeName: string, scheme: SecuritySchemeObject) {
     this.security[schemeName] = scheme;
   }
   override create(): FuncSseExported<I, O, Type> {
@@ -104,7 +102,7 @@ export class FuncSseBuilder<
     protected tags: string[],
     protected summary: string,
     protected description: string,
-    protected security: Record<string, SecurityScheme>,
+    protected security: Record<string, SecuritySchemeObject>,
     protected docsOrder: number,
     protected showIndocs: boolean,
   ) {
@@ -138,7 +136,7 @@ export class FuncSseBuilder<
     this.tags.push(...tags);
     return this;
   }
-  $addSecurity(schemeName: string, scheme: SecurityScheme): this {
+  $addSecurity(schemeName: string, scheme: SecuritySchemeObject): this {
     this.security[schemeName] = scheme;
     return this;
   }
@@ -152,7 +150,9 @@ export class FuncSseBuilder<
   }
   override $input = null as never;
   override $output = null as never;
-  $reqPath<P extends z.ZodObject<any>>(path: P): FuncSseBuilder<
+  $reqPath<P extends z.ZodObject<any>>(
+    path: P,
+  ): FuncSseBuilder<
     z.ZodObject<Omit<I["shape"], "path"> & { path: P }>,
     O,
     Type
@@ -160,7 +160,9 @@ export class FuncSseBuilder<
     this.input = z.object({ ...this.input.shape, path }) as never;
     return this as never;
   }
-  $reqQuery<Q extends z.ZodObject<any>>(query: Q): FuncSseBuilder<
+  $reqQuery<Q extends z.ZodObject<any>>(
+    query: Q,
+  ): FuncSseBuilder<
     z.ZodObject<Omit<I["shape"], "query"> & { query: Q }>,
     O,
     Type
@@ -168,30 +170,21 @@ export class FuncSseBuilder<
     this.input = z.object({ ...this.input.shape, query }) as never;
     return this as never;
   }
-  $resEvent<E extends z.ZodType>(event: E): FuncSseBuilder<
-    I,
-    E,
-    Type
-  > {
+  $resEvent<E extends z.ZodType>(event: E): FuncSseBuilder<I, E, Type> {
     this.output = event as never;
     return this as never;
   }
-  $encoder(encoder: (data: z.infer<O>) => string): FuncSseBuilder<
-    I,
-    O,
-    Type
-  > {
+  $encoder(encoder: (data: z.infer<O>) => string): FuncSseBuilder<I, O, Type> {
     this.encoder = encoder;
     return this;
   }
-  override $wrap(
-    wrap: F.FuncWrapper<I, O, Type>,
-  ): FuncSseBuilder<I, O, Type> {
+  override $wrap(wrap: F.FuncWrapper<I, O, Type>): FuncSseBuilder<I, O, Type> {
     return super.$wrap(wrap) as never;
   }
-  override $ref(
-    ref: { namespace: string; name: string },
-  ): FuncSseBuilder<I, O, Type> {
+  override $ref(ref: {
+    namespace: string;
+    name: string;
+  }): FuncSseBuilder<I, O, Type> {
     return super.$ref(ref) as never;
   }
   override $(
@@ -224,12 +217,15 @@ export class FuncSseBuilder<
   }
 }
 
-export const emptySseInput: z.ZodObject<{
-  path: z.ZodOptional<z.ZodAny>;
-  headers: z.ZodOptional<z.ZodAny>;
-  query: z.ZodOptional<z.ZodAny>;
-  body: z.ZodOptional<z.ZodAny>;
-}, z.core.$strip> = z.object({
+export const emptySseInput: z.ZodObject<
+  {
+    path: z.ZodOptional<z.ZodAny>;
+    headers: z.ZodOptional<z.ZodAny>;
+    query: z.ZodOptional<z.ZodAny>;
+    body: z.ZodOptional<z.ZodAny>;
+  },
+  "strip"
+> = z.object({
   path: z.any().optional(),
   headers: z.any().optional(),
   query: z.any().optional(),
@@ -269,11 +265,10 @@ export function defaultEncoder<OT>(data: OT): string {
  *   });
  * ```
  */
-export function streamFuncSse(method: SseMethod, path: string): FuncSseBuilder<
-  typeof emptySseInput,
-  typeof emptySseOutput,
-  "StreamFunc"
-> {
+export function streamFuncSse(
+  method: SseMethod,
+  path: string,
+): FuncSseBuilder<typeof emptySseInput, typeof emptySseOutput, "StreamFunc"> {
   return new FuncSseBuilder(
     [],
     [method],

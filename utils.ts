@@ -15,7 +15,7 @@ import type {
   SseOutput,
   SseTypes,
 } from "./endpoint/sse.ts";
-import type z from "zod/v4";
+import type z from "zod";
 
 /**
  * use this bundler to convert strongly typed Record<key, endpoint> to loosely.
@@ -220,7 +220,7 @@ export class HttpExecutor<
   }
   protected handleMiddlewareInvoke(
     idx: number,
-    result: ["Error", unknown] | ["Data", { headers: any; opt: any }],
+    result: ["Error", unknown] | ["Data", { headers?: any; opt?: any }],
   ) {
     if (this.status !== "Running") return;
     this.currentCancel = null;
@@ -238,7 +238,7 @@ export class HttpExecutor<
     this.invokeBuildIndex(idx + 1);
   }
   protected handleHttpInvoke(
-    result: ["Error", unknown] | ["Data", { headers: any; body: any }],
+    result: ["Error", unknown] | ["Data", { headers?: any; body?: any }],
   ) {
     if (this.status !== "Running") return;
     this.currentCancel = null;
@@ -332,7 +332,7 @@ export class SseExecutor<
   }
   protected handleMiddlewareInvoke(
     idx: number,
-    result: ["Error", unknown] | ["Data", { headers: any; opt: any }],
+    result: ["Error", unknown] | ["Data", { headers?: any; opt?: any }],
   ) {
     if (this.status !== "Running") return;
     this.currentCancel = null;

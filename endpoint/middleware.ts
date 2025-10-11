@@ -1,6 +1,6 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 import { F } from "@panth977/functions";
-import type { SecurityScheme } from "../zod-openapi.ts";
+import type { SecuritySchemeObject } from "../zod-openapi.ts";
 
 export type MiddlewareInput = z.ZodObject<{
   headers: z.ZodOptional<z.ZodAny> | z.ZodObject<any>;
@@ -10,21 +10,16 @@ export type MiddlewareOutput = z.ZodObject<{
   headers: z.ZodOptional<z.ZodAny> | z.ZodObject<any>;
   opt: z.ZodType;
 }>;
-export type MiddlewareTypes = Extract<
-  F.FuncTypes,
-  "SyncFunc" | "AsyncFunc"
->;
+export type MiddlewareTypes = Extract<F.FuncTypes, "SyncFunc" | "AsyncFunc">;
 export type FuncMiddlewareExported<
   I extends MiddlewareInput,
   O extends MiddlewareOutput,
   Type extends MiddlewareTypes,
-> =
-  & F.FuncExposed<I, O, Type>
-  & {
-    node: FuncMiddleware<I, O, Type>;
-    output: z.infer<O>;
-    input: z.infer<I>;
-  };
+> = F.FuncExposed<I, O, Type> & {
+  node: FuncMiddleware<I, O, Type>;
+  output: z.infer<O>;
+  input: z.infer<I>;
+};
 /**
  * Base Middleware Node [Is one of node used in Context.node]
  */
@@ -44,7 +39,7 @@ export class FuncMiddleware<
     readonly tags: string[],
     readonly summary: string,
     readonly description: string,
-    readonly security: Record<string, SecurityScheme>,
+    readonly security: Record<string, SecuritySchemeObject>,
   ) {
     super(type, input, output, wrappers, implementation, ref);
     this.state = F.ContextState.Cascade("Middleware", "create&read");
@@ -67,7 +62,7 @@ export class FuncMiddleware<
   addTags(...tags: string[]) {
     this.tags.push(...tags);
   }
-  addSecurity(schemeName: string, scheme: SecurityScheme) {
+  addSecurity(schemeName: string, scheme: SecuritySchemeObject) {
     this.security[schemeName] = scheme;
   }
   override create(): FuncMiddlewareExported<I, O, Type> {
@@ -104,7 +99,7 @@ export class FuncMiddlewareBuilder<
     protected tags: string[],
     protected summary: string,
     protected description: string,
-    protected security: Record<string, SecurityScheme>,
+    protected security: Record<string, SecuritySchemeObject>,
   ) {
     super(type, input, output, wrappers, ref);
   }
@@ -112,7 +107,7 @@ export class FuncMiddlewareBuilder<
     this.tags.push(...tags);
     return this;
   }
-  $addSecurity(schemeName: string, scheme: SecurityScheme): this {
+  $addSecurity(schemeName: string, scheme: SecuritySchemeObject): this {
     this.security[schemeName] = scheme;
     return this;
   }
@@ -126,7 +121,9 @@ export class FuncMiddlewareBuilder<
   }
   override $input = null as never;
   override $output = null as never;
-  $reqHeaders<H extends z.ZodObject<any>>(headers: H): FuncMiddlewareBuilder<
+  $reqHeaders<H extends z.ZodObject<any>>(
+    headers: H,
+  ): FuncMiddlewareBuilder<
     z.ZodObject<Omit<I["shape"], "headers"> & { headers: H }>,
     O,
     Type
@@ -134,7 +131,9 @@ export class FuncMiddlewareBuilder<
     this.input = z.object({ ...this.input.shape, headers }) as never;
     return this as never;
   }
-  $reqQuery<Q extends z.ZodObject<any>>(query: Q): FuncMiddlewareBuilder<
+  $reqQuery<Q extends z.ZodObject<any>>(
+    query: Q,
+  ): FuncMiddlewareBuilder<
     z.ZodObject<Omit<I["shape"], "query"> & { query: Q }>,
     O,
     Type
@@ -142,7 +141,9 @@ export class FuncMiddlewareBuilder<
     this.input = z.object({ ...this.input.shape, query }) as never;
     return this as never;
   }
-  $resHeaders<H extends z.ZodObject<any>>(headers: H): FuncMiddlewareBuilder<
+  $resHeaders<H extends z.ZodObject<any>>(
+    headers: H,
+  ): FuncMiddlewareBuilder<
     I,
     z.ZodObject<Omit<O["shape"], "headers"> & { headers: H }>,
     Type
@@ -150,7 +151,9 @@ export class FuncMiddlewareBuilder<
     this.output = z.object({ ...this.output.shape, headers }) as never;
     return this as never;
   }
-  $contextOpt<Opt extends z.ZodType>(opt: Opt): FuncMiddlewareBuilder<
+  $contextOpt<Opt extends z.ZodType>(
+    opt: Opt,
+  ): FuncMiddlewareBuilder<
     I,
     z.ZodObject<Omit<O["shape"], "opt"> & { opt: Opt }>,
     Type
@@ -163,9 +166,10 @@ export class FuncMiddlewareBuilder<
   ): FuncMiddlewareBuilder<I, O, Type> {
     return super.$wrap(wrap) as never;
   }
-  override $ref(
-    ref: { namespace: string; name: string },
-  ): FuncMiddlewareBuilder<I, O, Type> {
+  override $ref(ref: {
+    namespace: string;
+    name: string;
+  }): FuncMiddlewareBuilder<I, O, Type> {
     return super.$ref(ref) as never;
   }
   override $(
@@ -186,17 +190,23 @@ export class FuncMiddlewareBuilder<
   }
 }
 
-const emptyInput: z.ZodObject<{
-  headers: z.ZodOptional<z.ZodAny>;
-  query: z.ZodOptional<z.ZodAny>;
-}, z.core.$strip> = z.object({
+const emptyInput: z.ZodObject<
+  {
+    headers: z.ZodOptional<z.ZodAny>;
+    query: z.ZodOptional<z.ZodAny>;
+  },
+  "strip"
+> = z.object({
   headers: z.any().optional(),
   query: z.any().optional(),
 });
-const emptyOutput: z.ZodObject<{
-  headers: z.ZodOptional<z.ZodAny>;
-  opt: z.ZodOptional<z.ZodAny>;
-}, z.core.$strip> = z.object({
+const emptyOutput: z.ZodObject<
+  {
+    headers: z.ZodOptional<z.ZodAny>;
+    opt: z.ZodOptional<z.ZodAny>;
+  },
+  "strip"
+> = z.object({
   headers: z.any().optional(),
   opt: z.any().optional(),
 });

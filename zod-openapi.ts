@@ -1,21 +1,26 @@
-// openapi-generator.ts
-
-import { z } from "zod/v4";
+import { createDocument, type ZodOpenApiObject } from "zod-openapi";
 import {
-  emptyHttpOutput,
   FuncHttp,
   type FuncHttpExported,
   FuncSse,
+  type FuncSseExported,
   type HttpInput,
   type HttpOutput,
   type HttpTypes,
+  type SseInput,
+  type SseOutput,
+  type SseTypes,
 } from "./endpoint/index.ts";
-import type {
-  FuncSseExported,
-  SseInput,
-  SseOutput,
-  SseTypes,
-} from "./endpoint/sse.ts";
+import type { ZodOpenApiPathsObject } from "zod-openapi";
+import type { ZodOpenApiOperationObject } from "zod-openapi";
+import z from "zod";
+import type { ZodOpenApiResponseObject } from "zod-openapi";
+
+type Exists<T> = Exclude<T, undefined>;
+export type SecuritySchemeObject = Exclude<
+  Exists<Exists<ZodOpenApiObject["components"]>["securitySchemes"]>[string],
+  { $ref: string }
+>;
 export type HttpMethod =
   | "get"
   | "post"
@@ -25,126 +30,27 @@ export type HttpMethod =
   | "options"
   | "head"
   | "trace";
-
 export type EndpointBuild =
   | FuncHttpExported<HttpInput, HttpOutput, HttpTypes>
   | FuncSseExported<SseInput, SseOutput, SseTypes>;
+export type OpenAPIObject = ReturnType<typeof createDocument>;
+export type PathItemObject = Exists<OpenAPIObject["paths"]>[string];
+export type Methods = Exclude<
+  keyof PathItemObject,
+  "$ref" | `x-${string}` | "servers" | "parameters" | "summary" | "description"
+>;
+export type OperationObject = Exists<PathItemObject[Methods]>;
 
-// JSON Schema for OpenAPI 3.1 (loosely modeled for flexibility)
-export type JsonSchema = z.core.JSONSchema.BaseSchema;
+export type ComponentsObject = Exists<OpenAPIObject["components"]>;
+export type SchemaObject = Exclude<
+  Exists<ComponentsObject["schemas"]>[string],
+  { $ref: string }
+>;
+export type ReferenceObject = Exclude<
+  Exists<ComponentsObject["schemas"]>[string],
+  SchemaObject
+>;
 
-// OpenAPI Operation Object
-export type Route = {
-  operationId: string;
-  tags: string[];
-  security?: {
-    [scheme: string]: unknown[];
-  }[];
-  description?: string;
-  summary?: string;
-  parameters: Array<{
-    name: string;
-    in: "query" | "header" | "path" | "cookie";
-    required?: boolean;
-    schema?: JsonSchema;
-    description?: string;
-    example?: any;
-  }>;
-  requestBody?: {
-    description?: string;
-    required?: boolean;
-    content: {
-      [contentType: string]: {
-        schema: JsonSchema;
-        example?: any;
-      };
-    };
-  };
-  responses: {
-    [statusCode: string]: {
-      description: string;
-      content?: {
-        [contentType: string]: {
-          schema: JsonSchema;
-          example?: any;
-        };
-      };
-    };
-  };
-  deprecated?: boolean;
-  [extension: `x-${string}`]: any;
-};
-
-// Security Scheme Object
-export type SecurityScheme =
-  | {
-    type: "apiKey";
-    description?: string;
-    name: string;
-    in: "query" | "header" | "cookie";
-  }
-  | {
-    type: "http";
-    scheme: "basic" | "bearer";
-    bearerFormat?: string;
-    description?: string;
-  }
-  | {
-    type: "oauth2";
-    description?: string;
-    flows: {
-      implicit?: {
-        authorizationUrl: string;
-        scopes: Record<string, string>;
-      };
-      password?: {
-        tokenUrl: string;
-        scopes: Record<string, string>;
-      };
-      clientCredentials?: {
-        tokenUrl: string;
-        scopes: Record<string, string>;
-      };
-      authorizationCode?: {
-        authorizationUrl: string;
-        tokenUrl: string;
-        scopes: Record<string, string>;
-      };
-    };
-  }
-  | {
-    type: "openIdConnect";
-    openIdConnectUrl: string;
-    description?: string;
-  };
-
-export type OpenApiJson = {
-  openapi: string;
-  info: {
-    title: string;
-    version: string;
-    description?: string;
-    termsOfService?: string;
-    contact?: {
-      name?: string;
-      url?: string;
-      email?: string;
-    };
-    license?: {
-      name: string;
-      url?: string;
-    };
-  };
-  paths: Record<string, Record<HttpMethod, Route>>;
-  components: {
-    $defs: Record<string, JsonSchema>;
-    securitySchemes: Record<string, SecurityScheme>;
-  };
-  security?: Array<{ [scheme: string]: string[] }>;
-  tags?: Array<{ name: string; description?: string }>;
-  servers?: Array<{ url: string; description?: string }>;
-  [extension: `x-${string}`]: any;
-};
 /**
  * Document your routes by simply passing your endpoint bundle, and get a open-api.json
  * @param docEndpoints
@@ -153,7 +59,7 @@ export type OpenApiJson = {
  *
  * @example
  * ```ts
- * const routes = ROUTES.getEndpointsFromBundle({
+ * const routes = R.getEndpointsFromBundle({
  *   bundle: await import('./routes/index.ts'),
  *   excludeTags: ['internal-apis'],
  * }); // strong type will be lost
@@ -165,244 +71,188 @@ export type OpenApiJson = {
  * });
  * ```
  */
-export function generateOpenAPI(
-  info: OpenApiJson["info"],
-  servers: Array<{ url: string; description?: string }>,
-  bundle: Record<string, EndpointBuild>,
-): OpenApiJson {
-  //
-  const securitySchemes: Record<string, SecurityScheme> = {};
-  const paths: Record<string, Record<HttpMethod, Route>> = {};
-  const allRoutes: [number, Route, EndpointBuild][] = [];
-  const globalTypeShape: Record<string, z.ZodType> = {};
+export function getRouteDocJson(
+  docEndpoints: Record<string, EndpointBuild>,
+  params: Pick<
+    ZodOpenApiObject,
+    "info" | "tags" | "servers" | "security" | "externalDocs" | "components"
+  >,
+): OpenAPIObject {
+  const paths: ZodOpenApiPathsObject = {};
+  const securityData = Object.assign(
+    {},
+    params.components?.securitySchemes ?? {},
+  );
   for (
-    const build of Object.values(bundle).sort((a, b) =>
-      a.node.docsOrder - b.node.docsOrder
+    const build of Object.values(docEndpoints).sort((x, y) =>
+      x.node.docsOrder - y.node.docsOrder
     )
   ) {
     const middlewares = build.node.middlewares;
     const security = [
-      ...middlewares.map((m) => m.node.security),
-      build.node.security,
+      ...middlewares.map((m) => m.node.security ?? {}),
+      build.node.security ?? {},
     ];
-    Object.assign(securitySchemes, ...security);
-    const params: Route = {
-      operationId: build.node.ref.name,
-      tags: middlewares.reduce(
-        (tags, m) => [...tags, ...(m.node.tags ?? [])],
-        [...(build.node.tags ?? [])],
-      ),
-      security: security.map((security) =>
-        Object.fromEntries(Object.keys(security).map((x) => [x, []]))
-      ),
-      description: build.node.description,
-      summary: build.node.summary,
-      parameters: [],
-      requestBody: {
-        content: {},
-      },
-      responses: {
-        "200": {
-          description: "OK",
-          content: {},
+    Object.assign(securityData, ...security);
+    let obj: ZodOpenApiOperationObject;
+    if (build.node instanceof FuncHttp) {
+      obj = {
+        operationId: build.node.ref.name,
+        tags: middlewares.reduce(
+          (tags, m) => [...tags, ...(m.node.tags ?? [])],
+          [...(build.node.tags ?? [])],
+        ),
+        security: security.map((security) =>
+          Object.fromEntries(Object.keys(security).map((x) => [x, []]))
+        ),
+        description: build.node.description,
+        summary: build.node.summary,
+        requestParams: {
+          header: z.object(
+            middlewares.reduce(
+              (shape, middleware) =>
+                Object.assign(
+                  shape,
+                  middleware.node.reqHeaders instanceof z.ZodObject
+                    ? middleware.node.reqHeaders.shape
+                    : {},
+                ),
+              {
+                ...(build.node.reqHeaders instanceof z.ZodObject
+                  ? build.node.reqHeaders.shape
+                  : {}),
+              },
+            ),
+          ),
+          query: z.object(
+            middlewares.reduce(
+              (shape, middleware) =>
+                Object.assign(
+                  shape,
+                  middleware.node.reqQuery instanceof z.ZodObject
+                    ? middleware.node.reqQuery.shape
+                    : {},
+                ),
+              {
+                ...(build.node.reqQuery instanceof z.ZodObject
+                  ? build.node.reqQuery.shape
+                  : {}),
+              },
+            ),
+          ),
+          path: z.object({
+            ...(build.node.reqPath instanceof z.ZodObject
+              ? build.node.reqPath.shape
+              : {}),
+          }),
         },
-      },
-    };
-    const id = allRoutes.length;
-    allRoutes.push([id, params, build]);
-    if (build instanceof FuncHttp) {
-      const {
-        reqPath,
-        reqHeaders,
-        reqQuery,
-        reqBody,
-        resBody,
-        resHeaders,
-      } = build;
-      const pathShape = reqPath instanceof z.ZodObject
-        ? { ...reqPath.shape }
-        : {};
-      const headerShape = reqHeaders instanceof z.ZodObject
-        ? { ...reqHeaders.shape }
-        : {};
-      const queryShape = reqQuery instanceof z.ZodObject
-        ? { ...reqQuery.shape }
-        : {};
-      const bodyShape = reqBody;
-      const responseShape = resBody;
-      const responseHeaderShape = resHeaders instanceof z.ZodObject
-        ? { ...resHeaders.shape }
-        : {};
-      for (const middleware of build.middlewares) {
-        const { reqHeaders, reqQuery, resHeaders } = middleware.node;
-        if (reqHeaders instanceof z.ZodObject) {
-          Object.assign(headerShape, reqHeaders.shape);
-        }
-        if (reqQuery instanceof z.ZodObject) {
-          Object.assign(queryShape, reqQuery.shape);
-        }
-        if (resHeaders instanceof z.ZodObject) {
-          Object.assign(responseHeaderShape, resHeaders.shape);
-        }
-      }
-      if (bodyShape === emptyHttpOutput.shape.body) {
-        delete params.requestBody;
-      }
-      const routeSchema = z.object({
-        pathShape,
-        headerShape,
-        queryShape,
-        bodyShape,
-        responseShape,
-        responseHeaderShape,
-      });
-      globalTypeShape[`Route-${id}`] = routeSchema;
-    } else if (build instanceof FuncSse) {
-      const { reqPath, reqQuery } = build;
-      const pathShape = reqPath instanceof z.ZodObject
-        ? { ...reqPath.shape }
-        : {};
-      const queryShape = reqQuery instanceof z.ZodObject
-        ? { ...reqQuery.shape }
-        : {};
-      for (const middleware of build.middlewares) {
-        const { reqQuery } = middleware.node;
-        if (reqQuery instanceof z.ZodObject) {
-          Object.assign(queryShape, reqQuery.shape);
-        }
-      }
-      const routeSchema = z.object({
-        pathShape,
-        queryShape,
-      });
-      globalTypeShape[`Route-${id}`] = routeSchema;
-      delete params.requestBody;
-      params.responses["200"].content = {
-        "text/event-stream": {
-          schema: { type: "string" },
+        requestBody: {
+          content: {
+            [build.node.reqMediaTypes ?? "application/json"]: {
+              schema: build.node.reqBody,
+            },
+          },
+        },
+        responses: {
+          default: {
+            content: {
+              [build.node.resMediaTypes ?? "application/json"]: {
+                schema: build.node.resBody,
+              },
+            },
+            headers: z.object(
+              middlewares.reduce(
+                (shape, middleware) =>
+                  Object.assign(
+                    shape,
+                    middleware.node.resHeaders instanceof z.ZodObject
+                      ? middleware.node.resHeaders.shape
+                      : {},
+                  ),
+                {
+                  ...(build.node.resHeaders instanceof z.ZodObject
+                    ? build.node.resHeaders.shape
+                    : {}),
+                },
+              ),
+            ),
+          } as ZodOpenApiResponseObject,
+        },
+      };
+    } else if (build.node instanceof FuncSse) {
+      obj = {
+        operationId: build.node.ref.name,
+        tags: middlewares.reduce(
+          (tags, m) => tags.concat(m.node.tags ?? []),
+          [...(build.node.tags ?? [])],
+        ),
+        security: security.map((security) =>
+          Object.fromEntries(Object.keys(security).map((x) => [x, []]))
+        ),
+        description: build.node.description,
+        summary: build.node.summary,
+        requestParams: {
+          header: z.object(
+            middlewares.reduce(
+              (shape, middleware) =>
+                Object.assign(
+                  shape,
+                  middleware.node.reqHeaders instanceof z.ZodObject
+                    ? middleware.node.reqHeaders.shape
+                    : {},
+                ),
+              {},
+            ),
+          ),
+          query: z.object(
+            middlewares.reduce(
+              (shape, middleware) =>
+                Object.assign(
+                  shape,
+                  middleware.node.reqQuery instanceof z.ZodObject
+                    ? middleware.node.reqQuery.shape
+                    : {},
+                ),
+              {
+                ...(build.node.reqQuery instanceof z.ZodObject
+                  ? build.node.reqQuery.shape
+                  : {}),
+              },
+            ),
+          ),
+          path: z.object({
+            ...(build.node.reqPath instanceof z.ZodObject
+              ? build.node.reqPath.shape
+              : {}),
+          }),
+        },
+        responses: {
+          default: {
+            description: "Server side event!",
+            content: {
+              "text/event-stream": {
+                schema: z.string(),
+              },
+            },
+            headers: z.object({
+              "Content-Type": z.literal("text/event-stream"),
+            }),
+          },
         },
       };
     } else {
-      throw new Error("Invalid build");
+      throw new Error("Unimplemented");
     }
-    for (const path of build.paths) {
-      paths[path] ??= {} as Record<HttpMethod, Route>;
-      for (const method of build.methods) {
-        paths[path][method] = params;
-      }
-    }
-  }
-  const jsonSchema = z.toJSONSchema(z.object(globalTypeShape), {
-    cycles: "ref",
-    reused: "ref",
-    unrepresentable: "any",
-    io: "output",
-    target: "draft-2020-12",
-  }) as any;
-  if ("properties" in jsonSchema === false) {
-    throw new Error("Invalid JSON schema");
-  }
-  for (const [id, route, build] of allRoutes) {
-    const routeSchema = jsonSchema.properties[`Route-${id}`];
-    if (build instanceof FuncHttp) {
-      const {
-        pathShape,
-        headerShape,
-        queryShape,
-        bodyShape,
-        responseShape,
-        // responseHeaderShape,
-      } = routeSchema.properties;
-      for (
-        const parameter of [{
-          in: "path",
-          schema: pathShape.properties,
-        }, {
-          in: "header",
-          schema: headerShape.properties,
-        }, {
-          in: "query",
-          schema: queryShape.properties,
-        }] as const
-      ) {
-        for (const key in parameter.schema) {
-          route.parameters.push({
-            in: parameter.in,
-            name: key,
-            schema: parameter.schema[key],
-            required: true,
-            description: parameter.schema[key].description,
-            example: parameter.schema[key].example,
-          });
+    for (const path of build.node.paths) {
+      paths[path] ??= {};
+      for (const method of build.node.methods) {
+        if (paths[path][method]) {
+          throw new Error(`[${[path, method]}] Found duplicate.`);
         }
+        paths[path][method] = obj;
       }
-      if (route.requestBody) {
-        if (
-          !build.reqMediaTypes || build.reqMediaTypes === "application/json"
-        ) {
-          route.requestBody.content = {
-            "application/json": {
-              schema: bodyShape,
-            },
-          };
-        } else {
-          route.requestBody.content = {
-            [build.reqMediaTypes]: {
-              schema: {},
-            },
-          };
-        }
-      }
-      if (
-        !build.resMediaTypes || build.resMediaTypes === "application/json"
-      ) {
-        route.responses[200].content = {
-          "application/json": {
-            schema: responseShape,
-          },
-        };
-      } else {
-        route.responses[200].content = {
-          [build.resMediaTypes]: {
-            schema: {},
-          },
-        };
-      }
-    } else if (build instanceof FuncSse) {
-      const {
-        pathShape,
-        queryShape,
-      } = routeSchema.properties;
-      for (
-        const parameter of [{
-          in: "path",
-          schema: pathShape.properties,
-        }, {
-          in: "query",
-          schema: queryShape.properties,
-        }] as const
-      ) {
-        for (const key in parameter.schema) {
-          route.parameters.push({
-            in: parameter.in,
-            name: key,
-            schema: parameter.schema[key],
-            required: true,
-            description: parameter.schema[key].description,
-            example: parameter.schema[key].example,
-          });
-        }
-      }
-    } else {
-      throw new Error("Invalid build");
     }
   }
-  const json: OpenApiJson = {
-    openapi: "3.1.0",
-    info: info,
-    servers,
-    paths,
-    components: { $defs: jsonSchema.$defs ?? {}, securitySchemes },
-  };
-  return json;
+  (params.components ??= {}).securitySchemes = securityData;
+  return createDocument({ ...params, paths: paths, openapi: "3.1.0" });
 }

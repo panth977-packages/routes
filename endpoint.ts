@@ -1,4 +1,4 @@
-import type { HttpMethod, SecurityScheme } from "./zod-openapi.ts";
+import type { HttpMethod, SecuritySchemeObject } from "./zod-openapi.ts";
 import {
   emptyHttpInput,
   emptyHttpOutput,
@@ -19,7 +19,7 @@ type Meta = {
   tags?: string[];
   summary?: string;
   description?: string;
-  security?: Record<string, SecurityScheme>;
+  security?: Record<string, SecuritySchemeObject>;
   docsOrder?: number;
   showIndocs?: boolean;
 };
