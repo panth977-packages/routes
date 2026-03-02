@@ -16,6 +16,7 @@ import type {
   SseTypes,
 } from "./endpoint/sse.ts";
 import type z from "zod";
+import { T } from "@panth977/tools";
 
 /**
  * use this bundler to convert strongly typed Record<key, endpoint> to loosely.
@@ -171,7 +172,9 @@ function executeFunc<
       const data = func(context, input) as F.FuncReturn<O, "SyncFunc">;
       onData(cb, data);
     } else if (func.node.type === "AsyncFunc") {
-      const promise = func(context, input) as F.FuncReturn<O, "AsyncFunc">;
+      const promise = T.PPromise.from(
+        func(context, input) as F.FuncReturn<O, "AsyncFunc">,
+      );
       promise
         .ondata((onData<z.infer<O>>).bind(null, cb))
         .onerror((onError<z.infer<O>>).bind(null, cb));
