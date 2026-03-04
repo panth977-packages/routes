@@ -29,8 +29,10 @@ export type FuncHttpExported<
   Type extends HttpTypes,
 > = F.FuncExposed<I, O, Type> & {
   node: FuncHttp<I, O, Type>;
-  output: z.infer<O>;
-  input: z.infer<I>;
+  output: O;
+  input: I;
+  $output: z.infer<O>;
+  $input: z.infer<I>;
 };
 /**
  * Base Http Node [Is one of node used in Context.node]

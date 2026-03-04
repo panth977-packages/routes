@@ -21,8 +21,10 @@ export type FuncSseExported<
   Type extends SseTypes,
 > = F.FuncExposed<I, O, Type> & {
   node: FuncSse<I, O, Type>;
-  output: z.infer<O>;
-  input: z.infer<I>;
+  output: O;
+  input: I;
+  $output: z.infer<O>;
+  $input: z.infer<I>;
 };
 /**
  * Base Sse Node [Is one of node used in Context.node]

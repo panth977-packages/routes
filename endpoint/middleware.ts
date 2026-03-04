@@ -17,8 +17,10 @@ export type FuncMiddlewareExported<
   Type extends MiddlewareTypes,
 > = F.FuncExposed<I, O, Type> & {
   node: FuncMiddleware<I, O, Type>;
-  output: z.infer<O>;
-  input: z.infer<I>;
+  output: O;
+  input: I;
+  $output: z.infer<O>;
+  $input: z.infer<I>;
 };
 /**
  * Base Middleware Node [Is one of node used in Context.node]
