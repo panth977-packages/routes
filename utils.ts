@@ -210,8 +210,8 @@ export class HttpExecutor<
     if (this.status !== "WaitingToStart" && this.status !== "ErrorExit") {
       throw new Error(`Cannot run at [${this.status}] status`);
     }
-    this.invokeBuildIndex(0);
     this.status = "Running";
+    this.invokeBuildIndex(0);
   }
   cancel(): void {
     this.status = "CanceledExit";
