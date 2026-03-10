@@ -16,6 +16,7 @@ import type {
   SseTypes,
 } from "./endpoint/sse.ts";
 import type z from "zod";
+import { T } from "@panth977/tools";
 
 /**
  * use this bundler to convert strongly typed Record<key, endpoint> to loosely.
@@ -120,14 +121,18 @@ export function getEndpointsFromBundle({
 export function pathParser(path: string): string[] {
   return [...(path.match(/{([^}]+)}/g) ?? [])];
 }
-
+export type PromiseLikeOr<T> = T | PromiseLike<Awaited<T>>;
 export abstract class HttpContext extends F.Context<null> {
-  abstract get req(): {
+  abstract middlewareReq(): PromiseLikeOr<{
     headers: Record<string, string | string[]>;
-    path: Record<string, string> | string[];
     query: Record<string, string | string[]>;
+  }>;
+  abstract handlerReq(): PromiseLikeOr<{
+    headers: Record<string, string | string[]>;
+    query: Record<string, string | string[]>;
+    path: Record<string, string> | string[];
     body: any;
-  };
+  }>;
   abstract setResHeaders(headers: Record<string, string | string[]>): void;
   abstract endWithData(
     contentType: "application/json" | (string & Record<never, never>),
@@ -158,14 +163,23 @@ function onError<T>(
 function executeFunc<
   I extends F.FuncInput,
   O extends F.FuncOutput,
-  Type extends Extract<F.FuncTypes, "SyncFunc" | "AsyncFunc">,
+  Type extends F.FuncTypes,
   C extends F.Context,
 >(
   func: F.FuncExported<I, O, Type>,
   context: C,
-  input: z.infer<I>,
   cb: (result: ["Error", unknown] | ["Data", z.infer<O>]) => void,
+  input: PromiseLikeOr<z.infer<I>>,
 ): VoidFunction | null {
+  // TODO: make this cancelable promise
+  if (T.isPromiseLike(input)) {
+    T.PPromise.resolve(input).$then(
+      (executeFunc<I, O, Type, C>).bind(null, func, context, cb),
+      onError.bind(null, cb),
+    );
+    return null;
+  }
+  context.logDebug("ExecuteFunc", func.node.refString());
   try {
     if (func.node.type === "SyncFunc") {
       const data = func(context, input) as F.FuncReturn<O, "SyncFunc">;
@@ -266,22 +280,22 @@ export class HttpExecutor<
       this.currentCancel = executeFunc(
         this.http.node.middlewares[idx],
         this.context,
-        this.context.req,
         this.handleMiddlewareInvoke.bind(this, idx),
+        this.context.middlewareReq() as any,
       );
     } else {
       this.currentCancel = executeFunc(
         this.http,
         this.context,
-        this.context.req as any,
         this.handleHttpInvoke.bind(this),
+        this.context.handlerReq() as any,
       );
     }
   }
 }
 
 export abstract class SseContext extends F.Context<null> {
-  abstract get req(): {
+  abstract req(): {
     path: Record<string, string>;
     query: Record<string, string | string[]>;
   };
@@ -378,11 +392,11 @@ export class SseExecutor<
       this.currentCancel = executeFunc(
         this.sse.node.middlewares[idx],
         this.context,
-        this.context.req as any,
         this.handleMiddlewareInvoke.bind(this, idx),
+        this.context.req(),
       );
     } else {
-      const process = this.sse(this.context, this.context.req as any);
+      const process = this.sse(this.context, this.context.req());
       this.currentCancel = process.cancel.bind(process);
       process.onfinish(this.onEnd.bind(this));
       process.onerror(this.onError.bind(this));
