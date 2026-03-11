@@ -69,49 +69,49 @@ export class HttpError extends Error {
   }
 
   // 4xx Errors
-  static BadRequest = (msg?: string) => new HttpError(400, msg);
-  static Unauthorized = (msg?: string) => new HttpError(401, msg);
-  static PaymentRequired = (msg?: string) => new HttpError(402, msg);
-  static Forbidden = (msg?: string) => new HttpError(403, msg);
-  static NotFound = (msg?: string) => new HttpError(404, msg);
-  static MethodNotAllowed = (msg?: string) => new HttpError(405, msg);
-  static NotAcceptable = (msg?: string) => new HttpError(406, msg);
-  static ProxyAuthenticationRequired = (msg?: string) => new HttpError(407, msg);
-  static RequestTimeout = (msg?: string) => new HttpError(408, msg);
-  static Conflict = (msg?: string) => new HttpError(409, msg);
-  static Gone = (msg?: string) => new HttpError(410, msg);
-  static LengthRequired = (msg?: string) => new HttpError(411, msg);
-  static PreconditionFailed = (msg?: string) => new HttpError(412, msg);
-  static PayloadTooLarge = (msg?: string) => new HttpError(413, msg);
-  static URITooLong = (msg?: string) => new HttpError(414, msg);
-  static UnsupportedMediaType = (msg?: string) => new HttpError(415, msg);
-  static RangeNotSatisfiable = (msg?: string) => new HttpError(416, msg);
-  static ExpectationFailed = (msg?: string) => new HttpError(417, msg);
-  static ImATeapot = (msg?: string) => new HttpError(418, msg);
-  static MisdirectedRequest = (msg?: string) => new HttpError(421, msg);
-  static UnprocessableEntity = (msg?: string) => new HttpError(422, msg);
-  static Locked = (msg?: string) => new HttpError(423, msg);
-  static FailedDependency = (msg?: string) => new HttpError(424, msg);
-  static TooEarly = (msg?: string) => new HttpError(425, msg);
-  static UpgradeRequired = (msg?: string) => new HttpError(426, msg);
-  static PreconditionRequired = (msg?: string) => new HttpError(428, msg);
-  static TooManyRequests = (msg?: string) => new HttpError(429, msg);
-  static RequestHeaderFieldsTooLarge = (msg?: string) => new HttpError(431, msg);
-  static UnavailableForLegalReasons = (msg?: string) => new HttpError(451, msg);
+  static BadRequest: ErrorBuilder = (msg?: string) => new HttpError(400, msg);
+  static Unauthorized: ErrorBuilder = (msg?: string) => new HttpError(401, msg);
+  static PaymentRequired: ErrorBuilder = (msg?: string) => new HttpError(402, msg);
+  static Forbidden: ErrorBuilder = (msg?: string) => new HttpError(403, msg);
+  static NotFound: ErrorBuilder = (msg?: string) => new HttpError(404, msg);
+  static MethodNotAllowed: ErrorBuilder = (msg?: string) => new HttpError(405, msg);
+  static NotAcceptable: ErrorBuilder = (msg?: string) => new HttpError(406, msg);
+  static ProxyAuthenticationRequired: ErrorBuilder = (msg?: string) => new HttpError(407, msg);
+  static RequestTimeout: ErrorBuilder = (msg?: string) => new HttpError(408, msg);
+  static Conflict: ErrorBuilder = (msg?: string) => new HttpError(409, msg);
+  static Gone: ErrorBuilder = (msg?: string) => new HttpError(410, msg);
+  static LengthRequired: ErrorBuilder = (msg?: string) => new HttpError(411, msg);
+  static PreconditionFailed: ErrorBuilder = (msg?: string) => new HttpError(412, msg);
+  static PayloadTooLarge: ErrorBuilder = (msg?: string) => new HttpError(413, msg);
+  static URITooLong: ErrorBuilder = (msg?: string) => new HttpError(414, msg);
+  static UnsupportedMediaType: ErrorBuilder = (msg?: string) => new HttpError(415, msg);
+  static RangeNotSatisfiable: ErrorBuilder = (msg?: string) => new HttpError(416, msg);
+  static ExpectationFailed: ErrorBuilder = (msg?: string) => new HttpError(417, msg);
+  static ImATeapot: ErrorBuilder = (msg?: string) => new HttpError(418, msg);
+  static MisdirectedRequest: ErrorBuilder = (msg?: string) => new HttpError(421, msg);
+  static UnprocessableEntity: ErrorBuilder = (msg?: string) => new HttpError(422, msg);
+  static Locked: ErrorBuilder = (msg?: string) => new HttpError(423, msg);
+  static FailedDependency: ErrorBuilder = (msg?: string) => new HttpError(424, msg);
+  static TooEarly: ErrorBuilder = (msg?: string) => new HttpError(425, msg);
+  static UpgradeRequired: ErrorBuilder = (msg?: string) => new HttpError(426, msg);
+  static PreconditionRequired: ErrorBuilder = (msg?: string) => new HttpError(428, msg);
+  static TooManyRequests: ErrorBuilder = (msg?: string) => new HttpError(429, msg);
+  static RequestHeaderFieldsTooLarge: ErrorBuilder = (msg?: string) => new HttpError(431, msg);
+  static UnavailableForLegalReasons: ErrorBuilder = (msg?: string) => new HttpError(451, msg);
 
   // 5xx Errors
-  static InternalServerError = (msg?: string) => new HttpError(500, msg);
-  static NotImplemented = (msg?: string) => new HttpError(501, msg);
-  static BadGateway = (msg?: string) => new HttpError(502, msg);
-  static ServiceUnavailable = (msg?: string) => new HttpError(503, msg);
-  static GatewayTimeout = (msg?: string) => new HttpError(504, msg);
-  static HTTPVersionNotSupported = (msg?: string) => new HttpError(505, msg);
-  static VariantAlsoNegotiates = (msg?: string) => new HttpError(506, msg);
-  static InsufficientStorage = (msg?: string) => new HttpError(507, msg);
-  static LoopDetected = (msg?: string) => new HttpError(508, msg);
-  static BandwidthLimitExceeded = (msg?: string) => new HttpError(509, msg);
-  static NotExtended = (msg?: string) => new HttpError(510, msg);
-  static NetworkAuthenticationRequired = (msg?: string) => new HttpError(511, msg);
+  static InternalServerError: ErrorBuilder = (msg?: string) => new HttpError(500, msg);
+  static NotImplemented: ErrorBuilder = (msg?: string) => new HttpError(501, msg);
+  static BadGateway: ErrorBuilder = (msg?: string) => new HttpError(502, msg);
+  static ServiceUnavailable: ErrorBuilder = (msg?: string) => new HttpError(503, msg);
+  static GatewayTimeout: ErrorBuilder = (msg?: string) => new HttpError(504, msg);
+  static HTTPVersionNotSupported: ErrorBuilder = (msg?: string) => new HttpError(505, msg);
+  static VariantAlsoNegotiates: ErrorBuilder = (msg?: string) => new HttpError(506, msg);
+  static InsufficientStorage: ErrorBuilder = (msg?: string) => new HttpError(507, msg);
+  static LoopDetected: ErrorBuilder = (msg?: string) => new HttpError(508, msg);
+  static BandwidthLimitExceeded: ErrorBuilder = (msg?: string) => new HttpError(509, msg);
+  static NotExtended: ErrorBuilder = (msg?: string) => new HttpError(510, msg);
+  static NetworkAuthenticationRequired: ErrorBuilder = (msg?: string) => new HttpError(511, msg);
 }
+type ErrorBuilder = (msg?: string) => HttpError
 
-export default HttpError;
