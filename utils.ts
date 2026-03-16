@@ -173,7 +173,7 @@ function executeFunc<
 ): VoidFunction | null {
   // TODO: make this cancelable promise
   if (T.isPromiseLike(input)) {
-    T.PPromise.resolve(input).$then(
+    T.PPromise.resolve(input).then(
       (executeFunc<I, O, Type, C>).bind(null, func, context, cb),
       onError.bind(null, cb),
     );
