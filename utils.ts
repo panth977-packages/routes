@@ -186,9 +186,10 @@ function executeFunc<
       onData(cb, data);
     } else if (func.node.type === "AsyncFunc") {
       const promise = func(context, input) as F.FuncReturn<O, "AsyncFunc">;
-      promise
-        .ondata((onData<z.infer<O>>).bind(null, cb))
-        .onerror((onError<z.infer<O>>).bind(null, cb));
+      promise.then(
+        (onData<z.infer<O>>).bind(null, cb),
+        (onError<z.infer<O>>).bind(null, cb),
+      );
     } else {
       onError(cb, new Error("Invalid function type"));
     }
