@@ -190,7 +190,7 @@ export class FuncSseBuilder<
     return super.$ref(ref) as never;
   }
   override $(
-    implementation: F.FuncImplementationLike<I, O, Type>,
+    implementation: F.FuncImplementation<I, O, Type>,
   ): FuncSseExported<I, O, Type> {
     if (this.methods.length === 0) {
       throw new Error("No methods specified");
@@ -206,7 +206,7 @@ export class FuncSseBuilder<
       this.input,
       this.output,
       this.wrappers,
-      F.FuncBuilder.toImplementation(this.type, implementation),
+      implementation,
       this.ref,
       this.encoder,
       this.tags,

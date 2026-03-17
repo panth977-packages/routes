@@ -175,14 +175,14 @@ export class FuncMiddlewareBuilder<
     return super.$ref(ref) as never;
   }
   override $(
-    implementation: F.FuncImplementationLike<I, O, Type>,
+    implementation: F.FuncImplementation<I, O, Type>,
   ): FuncMiddlewareExported<I, O, Type> {
     return new FuncMiddleware(
       this.type,
       this.input,
       this.output,
       this.wrappers,
-      F.FuncBuilder.toImplementation(this.type, implementation),
+      implementation,
       this.ref,
       this.tags,
       this.summary,
