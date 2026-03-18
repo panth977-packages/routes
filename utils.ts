@@ -397,11 +397,28 @@ export class SseExecutor<
         this.context.req(),
       );
     } else {
-      const process = this.sse(this.context, this.context.req());
-      this.currentCancel = process.cancel.bind(process);
-      process.onfinish(this.onEnd.bind(this));
-      process.onerror(this.onError.bind(this));
-      process.listen(this.onData.bind(this));
+      const readable = this.sse(
+        this.context,
+        this.context.req(),
+      ) as ReadableStream<z.infer<O>>;
+      const reader = readable.getReader();
+      this.currentCancel = reader.cancel.bind(reader);
+      let i = 0;
+      const pump = async () => {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done || this.status !== "Running") {
+              if (done && this.status === "Running") this.onEnd();
+              break;
+            }
+            this.onData(value, i++);
+          }
+        } catch (error) {
+          if (this.status === "Running") this.onError(error);
+        }
+      };
+      pump();
     }
   }
 }
