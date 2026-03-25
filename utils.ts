@@ -15,8 +15,6 @@ import type {
   SseOutput,
   SseTypes,
 } from "./endpoint/sse.ts";
-import type z from "zod";
-import { T } from "@panth977/tools";
 
 /**
  * use this bundler to convert strongly typed Record<key, endpoint> to loosely.
@@ -122,303 +120,121 @@ export function pathParser(path: string): string[] {
   return [...(path.match(/{([^}]+)}/g) ?? [])];
 }
 export type PromiseLikeOr<T> = T | PromiseLike<Awaited<T>>;
-export abstract class HttpContext extends F.Context<null> {
-  abstract middlewareReq(): PromiseLikeOr<{
-    headers: Record<string, string | string[]>;
-    query: Record<string, string | string[]>;
-  }>;
-  abstract handlerReq(): PromiseLikeOr<{
+export function isHttpExport(build: any): build is FuncHttpExported<HttpInput, HttpOutput, HttpTypes> {
+  return typeof build === 'function' && 'node' in build && build.node instanceof FuncHttp;
+}
+export function isSseExport(build: any): build is FuncSseExported<SseInput, SseOutput, SseTypes> {
+  return typeof build === 'function' && 'node' in build && build.node instanceof FuncSse;
+}
+
+export abstract class RouteContext extends F.Context<null> {
+  constructor(requestId: string, path: string) {
+    super(requestId, path, null);
+  }
+
+  get requestId(): string {
+    return this.id;
+  }
+}
+
+export type HttpHandlers<C extends RouteContext, R> = {
+  middlewareReq(context: C): PromiseLikeOr<{ headers: Record<string, string | string[]>; query: Record<string, string | string[]> }>;
+  handlerReq(context: C): PromiseLikeOr<{
     headers: Record<string, string | string[]>;
     query: Record<string, string | string[]>;
     path: Record<string, string> | string[];
     body: any;
   }>;
-  abstract setResHeaders(headers: Record<string, string | string[]>): void;
-  abstract endWithData(
-    contentType: "application/json" | (string & Record<never, never>),
+  successRes(
+    context: C,
+    contentType: 'application/json' | (string & Record<never, never>),
+    headers: Record<string, string | string[]>,
     content: unknown,
-  ): void;
-  abstract endedWithError(err: unknown): void;
+  ): R;
+  errorRes(context: C, status: number, headers: Record<string, string[] | string>, message: string): R;
+};
 
-  constructor(requestId: string, path: string) {
-    super(requestId, path, null);
-  }
-
-  get requestId(): string {
-    return this.id;
-  }
-}
-function onData<T>(
-  cb: (result: ["Error", unknown] | ["Data", T]) => void,
-  data: T,
-): void {
-  cb(["Data", data]);
-}
-function onError<T>(
-  cb: (result: ["Error", unknown] | ["Data", T]) => void,
-  error: unknown,
-): void {
-  cb(["Error", error]);
-}
-function executeFunc<
-  I extends F.FuncInput,
-  O extends F.FuncOutput,
-  Type extends F.FuncTypes,
-  C extends F.Context,
->(
-  func: F.FuncExported<I, O, Type>,
+export async function executeHttp<C extends RouteContext, R>(
   context: C,
-  cb: (result: ["Error", unknown] | ["Data", z.infer<O>]) => void,
-  input: PromiseLikeOr<z.infer<I>>,
-): VoidFunction | null {
-  // TODO: make this cancelable promise
-  if (T.isPromiseLike(input)) {
-    Promise.resolve(input).then(
-      (executeFunc<I, O, Type, C>).bind(null, func, context, cb),
-      onError.bind(null, cb),
-    );
-    return null;
-  }
-  context.logDebug("ExecuteFunc", func.node.refString());
-  try {
-    if (func.node.type === "SyncFunc") {
-      const data = func(context, input) as F.FuncReturn<O, "SyncFunc">;
-      onData(cb, data);
-    } else if (func.node.type === "AsyncFunc") {
-      const promise = func(context, input) as F.FuncReturn<O, "AsyncFunc">;
-      promise.then(
-        (onData<z.infer<O>>).bind(null, cb),
-        (onError<z.infer<O>>).bind(null, cb),
-      );
-    } else {
-      onError(cb, new Error("Invalid function type"));
-    }
-  } catch (err) {
-    onError(cb, err);
-  }
-  return null;
-}
-
-export class HttpExecutor<
-  I extends HttpInput,
-  O extends HttpOutput,
-  Type extends HttpTypes,
-  C extends HttpContext,
-> {
-  readonly context: C;
-  readonly http: FuncHttpExported<I, O, Type>;
-  protected status:
-    | "WaitingToStart"
-    | "Running"
-    | "ErrorExit"
-    | "SuccessExit"
-    | "CanceledExit" = "WaitingToStart";
-  getStatus(): typeof this.status {
-    return this.status;
-  }
-  currentCancel: VoidFunction | null = null;
-  constructor(context: C, http: FuncHttpExported<I, O, Type>) {
-    this.context = context;
-    this.http = http;
-  }
-  start(): void {
-    if (this.status !== "WaitingToStart" && this.status !== "ErrorExit") {
-      throw new Error(`Cannot run at [${this.status}] status`);
-    }
-    this.status = "Running";
-    this.invokeBuildIndex(0);
-  }
-  cancel(): void {
-    this.status = "CanceledExit";
-    this.currentCancel?.();
-    this.currentCancel = null;
-  }
-  protected handleMiddlewareInvoke(
-    idx: number,
-    result: ["Error", unknown] | ["Data", { headers?: any; opt?: any }],
-  ) {
-    if (this.status !== "Running") return;
-    this.currentCancel = null;
-    if (result[0] === "Error") {
-      this.context.endedWithError(result[1]);
-      this.status = "ErrorExit";
-      return;
-    }
-    FuncMiddleware.setOpt(
-      this.context,
-      this.http.node.middlewares[idx].node,
-      result[1].opt,
-    );
-    this.context.setResHeaders(result[1].headers);
-    this.invokeBuildIndex(idx + 1);
-  }
-  protected handleHttpInvoke(
-    result: ["Error", unknown] | ["Data", { headers?: any; body?: any }],
-  ) {
-    if (this.status !== "Running") return;
-    this.currentCancel = null;
-    if (result[0] === "Error") {
-      this.context.endedWithError(result[1]);
-      this.status = "ErrorExit";
-      return;
-    }
-    this.context.setResHeaders(result[1].headers);
-    if (
-      !this.http.node.resMediaTypes ||
-      this.http.node.resMediaTypes === "application/json"
-    ) {
-      this.context.endWithData("application/json", result[1].body);
-    } else {
-      this.context.endWithData(this.http.node.resMediaTypes, result[1].body);
-    }
-    this.status = "SuccessExit";
-    return;
-  }
-  protected invokeBuildIndex(idx: number) {
-    if (this.status !== "Running") return;
-    this.currentCancel = null;
-    if (idx < this.http.node.middlewares.length) {
-      this.currentCancel = executeFunc(
-        this.http.node.middlewares[idx],
-        this.context,
-        this.handleMiddlewareInvoke.bind(this, idx),
-        this.context.middlewareReq() as any,
-      );
-    } else {
-      this.currentCancel = executeFunc(
-        this.http,
-        this.context,
-        this.handleHttpInvoke.bind(this),
-        this.context.handlerReq() as any,
-      );
-    }
-  }
-}
-
-export abstract class SseContext extends F.Context<null> {
-  abstract req(): {
-    path: Record<string, string>;
-    query: Record<string, string | string[]>;
-  };
-
-  abstract send(data: string): void;
-  abstract endedWithError(err: unknown): void;
-  abstract endedWithSuccess(): void;
-
-  constructor(requestId: string, path: string) {
-    super(requestId, path, null);
-  }
-
-  get requestId(): string {
-    return this.id;
-  }
-}
-
-export class SseExecutor<
-  I extends SseInput,
-  O extends SseOutput,
-  Type extends SseTypes,
-  C extends SseContext,
-> {
-  readonly context: C;
-  readonly sse: FuncSseExported<I, O, Type>;
-  private status:
-    | "WaitingToStart"
-    | "Running"
-    | "ErrorExit"
-    | "SuccessExit"
-    | "CanceledExit" = "WaitingToStart";
-  currentCancel: VoidFunction | null = null;
-  constructor(context: C, sse: FuncSseExported<I, O, Type>) {
-    this.context = context;
-    this.sse = sse;
-  }
-  start(): void {
-    if (this.status !== "WaitingToStart" && this.status !== "ErrorExit") {
-      throw new Error(`Cannot run at [${this.status}] status`);
-    }
-    this.status = "Running";
-    this.invokeBuildIndex(0);
-  }
-  cancel(): void {
-    this.status = "CanceledExit";
-    this.currentCancel?.();
-    this.currentCancel = null;
-  }
-  protected handleMiddlewareInvoke(
-    idx: number,
-    result: ["Error", unknown] | ["Data", { headers?: any; opt?: any }],
-  ) {
-    if (this.status !== "Running") return;
-    this.currentCancel = null;
-    if (result[0] === "Error") {
-      this.context.endedWithError(result[1]);
-      this.status = "ErrorExit";
-      return;
-    }
-    FuncMiddleware.setOpt(
-      this.context,
-      this.sse.node.middlewares[idx].node,
-      result[1].opt,
-    );
-    this.invokeBuildIndex(idx + 1);
-  }
-  protected onEnd() {
-    this.currentCancel = null;
-    this.context.endedWithSuccess();
-    this.status = "SuccessExit";
-  }
-  protected onError(error: unknown) {
-    this.currentCancel = null;
-    this.context.endedWithError(error);
-    this.status = "ErrorExit";
-  }
-  protected onData(data: z.infer<O>, _i: number) {
-    let output;
-    try {
-      output = this.sse.node.encoder(data);
-    } catch (error) {
-      this.currentCancel?.();
-      this.currentCancel = null;
-      this.context.endedWithError(error);
-      this.status = "ErrorExit";
-      return;
-    }
-    this.context.send(output);
-  }
-  protected invokeBuildIndex(idx: number) {
-    if (this.status !== "Running") return;
-    this.currentCancel = null;
-    if (idx < this.sse.node.middlewares.length) {
-      this.currentCancel = executeFunc(
-        this.sse.node.middlewares[idx],
-        this.context,
-        this.handleMiddlewareInvoke.bind(this, idx),
-        this.context.req(),
-      );
-    } else {
-      const readable = this.sse(
-        this.context,
-        this.context.req(),
-      ) as ReadableStream<z.infer<O>>;
-      const reader = readable.getReader();
-      this.currentCancel = reader.cancel.bind(reader);
-      let i = 0;
-      const pump = async () => {
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done || this.status !== "Running") {
-              if (done && this.status === "Running") this.onEnd();
-              break;
-            }
-            this.onData(value, i++);
-          }
-        } catch (error) {
-          if (this.status === "Running") this.onError(error);
+  http: FuncHttpExported<HttpInput, HttpOutput, HttpTypes>,
+  handler: HttpHandlers<C, R>,
+  onError: (context: C, err: unknown) => { status: number; headers?: Record<string, string[] | string>; message: string },
+): Promise<R> {
+  const headers: Record<string, string[] | string> = {};
+  function addHeaders(result: { headers?: Record<string, string[] | string> }) {
+    if (result.headers) {
+      for (const key in result.headers) {
+        if (headers[key] === undefined) {
+          headers[key] = result.headers[key];
+        } else {
+          headers[key] = [
+            ...(Array.isArray(headers[key]) ? headers[key] : [headers[key]]),
+            ...(Array.isArray(result.headers[key]) ? result.headers[key] : [result.headers[key]]),
+          ];
         }
-      };
-      pump();
+      }
     }
   }
+  try {
+    for (const middleware of http.node.middlewares) {
+      const input = await handler.middlewareReq(context);
+      const result = await middleware(context, input);
+      FuncMiddleware.setOpt(context, middleware.node, result.opt);
+      addHeaders(result);
+    }
+    const input = await handler.handlerReq(context);
+    const result = await http(context, input);
+    addHeaders(result);
+    const contentType = http.node.resMediaTypes || 'application/json';
+    return handler.successRes(context, contentType, headers, result.body);
+  } catch (err) {
+    const result = onError(context, err);
+    addHeaders(result);
+    return handler.errorRes(context, result.status, headers, result.message);
+  }
+}
+export type SseHandlers<C extends RouteContext, R> = {
+  req(context: C): { path: Record<string, string>; query: Record<string, string | string[]> };
+  start(context: C): R;
+  sendData(context: C, data: string): void;
+  endSuccess(context: C): void;
+  endError(context: C, data: string): void;
+};
+
+export function executeSse<C extends RouteContext, R>(
+  context: C,
+  sse: FuncSseExported<SseInput, SseOutput, SseTypes>,
+  handler: SseHandlers<C, R>,
+  onError: (context: C, err: unknown) => string,
+  onEnd: (context: C) => void,
+): R {
+  const res = handler.start(context);
+  (async function () {
+    let reader: ReadableStreamDefaultReader<any> | null = null;
+    try {
+      for (const middleware of sse.node.middlewares) {
+        const input = handler.req(context);
+        const result = await middleware(context, input);
+        FuncMiddleware.setOpt(context, middleware.node, result.opt);
+      }
+      const readable = sse(context, handler.req(context));
+      reader = readable.getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          handler.endSuccess(context);
+          break;
+        }
+        const output = sse.node.encoder(value);
+        handler.sendData(context, output);
+      }
+    } catch (err) {
+      const output = onError(context, err);
+      handler.endError(context, output);
+    } finally {
+      reader?.releaseLock();
+      onEnd(context);
+    }
+  })();
+  return res;
 }
