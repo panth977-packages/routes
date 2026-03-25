@@ -120,11 +120,17 @@ export function pathParser(path: string): string[] {
   return [...(path.match(/{([^}]+)}/g) ?? [])];
 }
 export type PromiseLikeOr<T> = T | PromiseLike<Awaited<T>>;
-export function isHttpExport(build: any): build is FuncHttpExported<HttpInput, HttpOutput, HttpTypes> {
-  return typeof build === 'function' && 'node' in build && build.node instanceof FuncHttp;
+export function isHttpExport(
+  build: any,
+): build is FuncHttpExported<HttpInput, HttpOutput, HttpTypes> {
+  return typeof build === "function" && "node" in build &&
+    build.node instanceof FuncHttp;
 }
-export function isSseExport(build: any): build is FuncSseExported<SseInput, SseOutput, SseTypes> {
-  return typeof build === 'function' && 'node' in build && build.node instanceof FuncSse;
+export function isSseExport(
+  build: any,
+): build is FuncSseExported<SseInput, SseOutput, SseTypes> {
+  return typeof build === "function" && "node" in build &&
+    build.node instanceof FuncSse;
 }
 
 export abstract class RouteContext extends F.Context<null> {
@@ -138,7 +144,14 @@ export abstract class RouteContext extends F.Context<null> {
 }
 
 export type HttpHandlers<C extends RouteContext, R> = {
-  middlewareReq(context: C): PromiseLikeOr<{ headers: Record<string, string | string[]>; query: Record<string, string | string[]> }>;
+  middlewareReq(
+    context: C,
+  ): PromiseLikeOr<
+    {
+      headers: Record<string, string | string[]>;
+      query: Record<string, string | string[]>;
+    }
+  >;
   handlerReq(context: C): PromiseLikeOr<{
     headers: Record<string, string | string[]>;
     query: Record<string, string | string[]>;
@@ -147,18 +160,30 @@ export type HttpHandlers<C extends RouteContext, R> = {
   }>;
   successRes(
     context: C,
-    contentType: 'application/json' | (string & Record<never, never>),
+    contentType: "application/json" | (string & Record<never, never>),
     headers: Record<string, string | string[]>,
     content: unknown,
   ): R;
-  errorRes(context: C, status: number, headers: Record<string, string[] | string>, message: string): R;
+  errorRes(
+    context: C,
+    status: number,
+    headers: Record<string, string[] | string>,
+    message: string,
+  ): R;
 };
 
 export async function executeHttp<C extends RouteContext, R>(
   context: C,
   http: FuncHttpExported<HttpInput, HttpOutput, HttpTypes>,
   handler: HttpHandlers<C, R>,
-  onError: (context: C, err: unknown) => { status: number; headers?: Record<string, string[] | string>; message: string },
+  onError: (
+    context: C,
+    err: unknown,
+  ) => {
+    status: number;
+    headers?: Record<string, string[] | string>;
+    message: string;
+  },
 ): Promise<R> {
   const headers: Record<string, string[] | string> = {};
   function addHeaders(result: { headers?: Record<string, string[] | string> }) {
@@ -169,7 +194,9 @@ export async function executeHttp<C extends RouteContext, R>(
         } else {
           headers[key] = [
             ...(Array.isArray(headers[key]) ? headers[key] : [headers[key]]),
-            ...(Array.isArray(result.headers[key]) ? result.headers[key] : [result.headers[key]]),
+            ...(Array.isArray(result.headers[key])
+              ? result.headers[key]
+              : [result.headers[key]]),
           ];
         }
       }
@@ -185,7 +212,7 @@ export async function executeHttp<C extends RouteContext, R>(
     const input = await handler.handlerReq(context);
     const result = await http(context, input);
     addHeaders(result);
-    const contentType = http.node.resMediaTypes || 'application/json';
+    const contentType = http.node.resMediaTypes || "application/json";
     return handler.successRes(context, contentType, headers, result.body);
   } catch (err) {
     const result = onError(context, err);
@@ -194,7 +221,9 @@ export async function executeHttp<C extends RouteContext, R>(
   }
 }
 export type SseHandlers<C extends RouteContext, R> = {
-  req(context: C): { path: Record<string, string>; query: Record<string, string | string[]> };
+  req(
+    context: C,
+  ): { path: Record<string, string>; query: Record<string, string | string[]> };
   start(context: C): R;
   sendData(context: C, data: string): void;
   endSuccess(context: C): void;
