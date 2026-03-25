@@ -27,9 +27,7 @@ export type HttpMethod =
   | "put"
   | "patch"
   | "delete"
-  | "options"
-  | "head"
-  | "trace";
+  | "options";
 export type EndpointBuild =
   | FuncHttpExported<HttpInput, HttpOutput, HttpTypes>
   | FuncSseExported<SseInput, SseOutput, SseTypes>;
