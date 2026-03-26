@@ -160,7 +160,6 @@ export type HttpHandlers<C extends RouteContext, R> = {
   }>;
   successRes(
     context: C,
-    contentType: "application/json" | (string & Record<never, never>),
     headers: Record<string, string | string[]>,
     content: unknown,
   ): R;
@@ -212,8 +211,7 @@ export async function executeHttp<C extends RouteContext, R>(
     const input = await handler.handlerReq(context);
     const result = await http(context, input);
     addHeaders(result);
-    const contentType = http.node.resMediaTypes || "application/json";
-    return handler.successRes(context, contentType, headers, result.body);
+    return handler.successRes(context, headers, result.body);
   } catch (err) {
     const result = onError(context, err);
     addHeaders(result);
