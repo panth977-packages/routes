@@ -15,6 +15,7 @@ import type {
   SseOutput,
   SseTypes,
 } from "./endpoint/sse.ts";
+import { T } from "@panth977/tools";
 
 /**
  * use this bundler to convert strongly typed Record<key, endpoint> to loosely.
@@ -144,9 +145,7 @@ export abstract class RouteContext extends F.Context<null> {
 }
 
 export type HttpHandlers<C extends RouteContext, R> = {
-  middlewareReq(
-    context: C,
-  ): PromiseLikeOr<
+  middlewareReq(context: C): PromiseLikeOr<
     {
       headers: Record<string, string | string[]>;
       query: Record<string, string | string[]>;
@@ -158,32 +157,29 @@ export type HttpHandlers<C extends RouteContext, R> = {
     path: Record<string, string> | string[];
     body: any;
   }>;
-  successRes(
-    context: C,
-    headers: Record<string, string | string[]>,
-    content: unknown,
-  ): R;
-  errorRes(
-    context: C,
-    status: number,
-    headers: Record<string, string[] | string>,
-    message: string,
-  ): R;
+  onError: (context: C, err: unknown) => {
+    status: number;
+    headers?: Record<string, string[] | string>;
+    message: string;
+  };
 };
 
 export async function executeHttp<C extends RouteContext, R>(
   context: C,
   http: FuncHttpExported<HttpInput, HttpOutput, HttpTypes>,
   handler: HttpHandlers<C, R>,
-  onError: (
-    context: C,
-    err: unknown,
-  ) => {
+): Promise<
+  {
+    type: "success";
+    headers: Record<string, string | string[]>;
+    content: unknown;
+  } | {
+    type: "error";
     status: number;
     headers?: Record<string, string[] | string>;
     message: string;
-  },
-): Promise<R> {
+  }
+> {
   const headers: Record<string, string[] | string> = {};
   function addHeaders(result: { headers?: Record<string, string[] | string> }) {
     if (result.headers) {
@@ -211,57 +207,53 @@ export async function executeHttp<C extends RouteContext, R>(
     const input = await handler.handlerReq(context);
     const result = await http(context, input);
     addHeaders(result);
-    return handler.successRes(context, headers, result.body);
+    return { type: "success", headers, content: result.body };
   } catch (err) {
-    const result = onError(context, err);
+    const result = handler.onError(context, err);
     addHeaders(result);
-    return handler.errorRes(context, result.status, headers, result.message);
+    return {
+      type: "error",
+      headers,
+      status: result.status,
+      message: result.message,
+    };
   }
 }
 export type SseHandlers<C extends RouteContext, R> = {
   req(
     context: C,
   ): { path: Record<string, string>; query: Record<string, string | string[]> };
-  start(context: C): R;
-  sendData(context: C, data: string): void;
-  endSuccess(context: C): void;
-  endError(context: C, data: string): void;
+  onError: (context: C, err: unknown) => string;
 };
 
 export function executeSse<C extends RouteContext, R>(
   context: C,
   sse: FuncSseExported<SseInput, SseOutput, SseTypes>,
   handler: SseHandlers<C, R>,
-  onError: (context: C, err: unknown) => string,
-  onEnd: (context: C) => void,
-): R {
-  const res = handler.start(context);
+): ReadableStream<string> {
+  const stream = new T.PStream<string>();
   (async function () {
-    let reader: ReadableStreamDefaultReader<any> | null = null;
+    let isCanceled = false;
+    stream.onAbort(() => isCanceled = true);
     try {
       for (const middleware of sse.node.middlewares) {
         const input = handler.req(context);
         const result = await middleware(context, input);
+        if (isCanceled) return;
         FuncMiddleware.setOpt(context, middleware.node, result.opt);
       }
-      const readable = sse(context, handler.req(context));
-      reader = readable.getReader();
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-          handler.endSuccess(context);
-          break;
+      const out = sse(context, handler.req(context));
+      for await (const data of T.PStream.Iterable(out)) {
+        if (isCanceled) {
+          out.cancel();
+          return;
         }
-        const output = sse.node.encoder(value);
-        handler.sendData(context, output);
+        stream.emit(sse.node.encoder(data));
       }
+      stream.close();
     } catch (err) {
-      const output = onError(context, err);
-      handler.endError(context, output);
-    } finally {
-      reader?.releaseLock();
-      onEnd(context);
+      stream.error(err);
     }
   })();
-  return res;
+  return stream.stream;
 }
