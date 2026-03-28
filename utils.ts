@@ -243,15 +243,10 @@ export function executeSse<C extends RouteContext, R>(
         FuncMiddleware.setOpt(context, middleware.node, result.opt);
       }
       const out = sse(context, handler.req(context));
-      for await (const data of T.PStream.Iterable(out)) {
-        if (isCanceled) break;
+      for await (const data of T.PStream.Iterable(out, stream.onAbort.bind(stream))) {
         stream.emit(sse.node.encoder(data));
       }
-      if (isCanceled) {
-        out.cancel();
-      } else {
-        stream.close();
-      }
+      stream.close();
     } catch (err) {
       stream.error(err);
     }
