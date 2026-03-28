@@ -248,6 +248,11 @@ export function executeSse<C extends RouteContext, R>(
       }
       stream.close();
     } catch (err) {
+      try {
+        stream.emit(handler.onError(context, err))
+      } catch {
+        // ignore
+      }
       stream.error(err);
     }
   })();
