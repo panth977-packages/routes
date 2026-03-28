@@ -244,13 +244,14 @@ export function executeSse<C extends RouteContext, R>(
       }
       const out = sse(context, handler.req(context));
       for await (const data of T.PStream.Iterable(out)) {
-        if (isCanceled) {
-          out.cancel();
-          return;
-        }
+        if (isCanceled) break;
         stream.emit(sse.node.encoder(data));
       }
-      stream.close();
+      if (isCanceled) {
+        out.cancel();
+      } else {
+        stream.close();
+      }
     } catch (err) {
       stream.error(err);
     }
