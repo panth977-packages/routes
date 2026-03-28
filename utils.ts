@@ -242,11 +242,11 @@ export function executeSse<C extends RouteContext, R>(
         if (isCanceled) return;
         FuncMiddleware.setOpt(context, middleware.node, result.opt);
       }
-      const out = sse(context, handler.req(context));
-      for await (const data of T.PStream.Iterable(out, stream.onAbort.bind(stream))) {
-        stream.emit(sse.node.encoder(data));
-      }
-      stream.close();
+      await T.PStream.TransferStream(sse(context, handler.req(context)), stream, {
+        listen(data) {
+          stream.emit(sse.node.encoder(data));
+        }
+      });
     } catch (err) {
       try {
         stream.emit(handler.onError(context, err))
