@@ -229,7 +229,7 @@ export function getRouteDocJson(
             description: "Server side event!",
             content: {
               "text/event-stream": {
-                schema: z.string(),
+                schema: build.node.output,
               },
             },
             headers: z.object({
