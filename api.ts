@@ -70,7 +70,7 @@ export async function apiRequest(context: F.Context, config: ApiRequestConfig): 
     });
 
     // 4. Handle non-2xx status codes using our custom error
-    if (validateStatus ? validateStatus(response.status) : !response.ok) {
+    if (validateStatus ? !validateStatus(response.status) : !response.ok) {
       throw new ApiError(
         `Request failed with status ${response.status}`,
         response,

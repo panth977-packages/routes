@@ -146,7 +146,7 @@ export function getRouteDocJson(
         },
         requestBody: {
           content: {
-            [build.node.reqMediaTypes ?? "application/json"]: {
+            [build.node.reqMediaTypes || "application/json"]: {
               schema: build.node.reqBody,
             },
           },
@@ -154,7 +154,7 @@ export function getRouteDocJson(
         responses: {
           default: {
             content: {
-              [build.node.resMediaTypes ?? "application/json"]: {
+              [build.node.resMediaTypes || "application/json"]: {
                 schema: build.node.resBody,
               },
             },
